@@ -26,7 +26,7 @@
     const COLORS = ["#2563eb","#16a34a","#dc2626","#9333ea","#ea580c","#0891b2","#65a30d","#db2777","#d97706","#7c3aed"];
     const CE=140,CP=150,CD=128,CT=68,CX=32;
     const TW=CE+CP+CD*7+CT+CX;
-    const DEF_P={jourDecalage:2,jourLimite:17,jourPoids:0.5,soirDebut:18.1,soirLimite:20,soirPoids:0.5,sepDecimal:","};
+    const DEF_P={jourDecalage:2,jourLimite:17,jourPoids:0.5,soirDebut:18.1,soirLimite:20,soirPoids:0.5,sepDecimal:",",tolEff:0,tolEffOn:false};
 
     const addD=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
     const fmt=(d,s=false)=>d.toLocaleDateString("fr-CA",s?{day:"2-digit",month:"short"}:{day:"numeric",month:"long"});
@@ -92,7 +92,7 @@
 
     const uStyle={border:"none",borderBottom:"1px solid #94a3b8",padding:"1px 2px",fontSize:12,outline:"none",color:"#334155",background:"transparent"};
     const selS={border:"none",fontSize:12,color:"#475569",background:"transparent",outline:"none",cursor:"pointer",appearance:"none",textAlign:"center",fontWeight:500,width:"100%"};
-    const TH=(x={})=>Object.assign({padding:"7px 8px",textAlign:"center",fontSize:10.5,fontWeight:700,color:"#64748b",letterSpacing:"0.6px",background:"#f8fafc"},x);
+    const TH=(x={})=>Object.assign({padding:"5px 8px",textAlign:"center",fontSize:10.5,fontWeight:700,color:"#64748b",letterSpacing:"0.6px",background:"#f8fafc"},x);
 
     const PartSelect=({value,onChange})=>(
       <select value={value} onChange={e=>onChange("particularite",e.target.value)} style={selS}>
@@ -135,13 +135,13 @@
       return <PartSelect value={row.particularite} onChange={onChange}/>;
     }
 
-    function ParamRow({label,value,onChange,unit}){
+    function ParamRow({label,value,onChange,unit,step}){
       return(
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
           <span style={{fontSize:12,color:"#475569",flex:1}}>{label}</span>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <input type="number" value={value} onChange={e=>onChange(e.target.value)} step="0.1" style={{border:"1px solid #e2e8f0",padding:"4px 12px",fontSize:13,fontWeight:600,color:"#0f172a",width:100,textAlign:"left",outline:"none",borderRadius:0}}/>
-            <span style={{fontSize:11,color:"#94a3b8",minWidth:12}}>{unit}</span>
+            <input type="number" value={value} onChange={e=>onChange(e.target.value)} step={step||"0.1"} style={{border:"1px solid #e2e8f0",padding:"4px 12px",fontSize:13,fontWeight:600,color:"#0f172a",width:100,textAlign:"left",outline:"none",borderRadius:0}}/>
+            <span style={{fontSize:11,color:"#94a3b8",minWidth:16}}>{unit}</span>
           </div>
         </div>
       );
@@ -149,17 +149,26 @@
 
     function Pill({label,value,color}){
       return(
-        <div style={{background:"#fff",border:"1.5px solid #e2e8f0",padding:"6px 14px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",alignSelf:"stretch"}}>
-          <div style={{fontSize:10,color:"#94a3b8",fontWeight:600,letterSpacing:"0.5px",textTransform:"uppercase"}}>{label}</div>
-          <div style={{fontSize:15,fontWeight:800,color,marginTop:1}}>{value}</div>
+        <div style={{background:"#fff",border:"1.5px solid #e2e8f0",padding:"4px 12px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",alignSelf:"stretch"}}>
+          <div style={{fontSize:9,color:"#94a3b8",fontWeight:600,letterSpacing:"0.5px",textTransform:"uppercase"}}>{label}</div>
+          <div style={{fontSize:13,fontWeight:800,color,marginTop:1}}>{value}</div>
         </div>
       );
     }
 
-    const niS=()=>({display:"block",width:"100%",border:"none",padding:"1px 0",fontSize:16,fontWeight:600,color:"#1e293b",background:"transparent",outline:"none",boxSizing:"border-box"});
-    const tiS=(f,bg,fc)=>({border:"1px "+(fc?"dashed #0f172a":"solid "+(f?"#a0a8b8":"#c8cdd8")),borderRadius:6,padding:"3px 5px",fontSize:14,background:fc?"#e0f0e8":bg,outline:"none",width:78,minWidth:78,maxWidth:78,textAlign:"center",color:f?"#0f172a":"#9ba3af",cursor:"text",fontWeight:500,transition:"border .1s",boxSizing:"border-box"});
-    const cinS=(bg,fc)=>({border:"1px "+(fc?"dashed #0f172a":"solid #c8cdd8"),borderRadius:6,padding:"3px 5px",fontSize:14,background:fc?"#e0f0e8":bg,outline:"none",width:78,textAlign:"center",color:"#0f172a",cursor:"text",fontWeight:400});
-    const effS=(match)=>({border:"1px solid "+(match?"#16a34a":"#e2e8f0"),borderRadius:6,padding:"3px 2px",fontSize:12,fontWeight:600,background:match?"#dcfce7":"#f8fafc",outline:"none",width:44,textAlign:"center",color:match?"#15803d":"#334155",cursor:"text"});
+    const niS=()=>({display:"block",width:"100%",border:"none",padding:"0",fontSize:13,fontWeight:600,color:"#1e293b",background:"transparent",outline:"none",boxSizing:"border-box"});
+    const tiS=(f,bg,fc)=>({border:"1px "+(fc?"dashed #0f172a":"solid "+(f?"#a0a8b8":"#c8cdd8")),borderRadius:5,padding:"2px 5px",fontSize:13,background:fc?"#e0f0e8":bg,outline:"none",width:72,minWidth:72,maxWidth:72,textAlign:"center",color:f?"#0f172a":"#9ba3af",cursor:"text",fontWeight:500,transition:"border .1s",boxSizing:"border-box"});
+    const cinS=(bg,fc)=>({border:"1px "+(fc?"dashed #0f172a":"solid #c8cdd8"),borderRadius:5,padding:"2px 5px",fontSize:13,background:fc?"#e0f0e8":bg,outline:"none",width:72,textAlign:"center",color:"#0f172a",cursor:"text",fontWeight:400});
+    const effS=(exact,close,below,above)=>({border:"1px solid "+(exact?"#16a34a":close?"#86efac":below?"#fca5a5":above?"#fcd34d":"#e2e8f0"),borderRadius:5,padding:"2px 2px",fontSize:12,fontWeight:600,background:exact?"#dcfce7":close?"#f0fdf4":below?"#fef2f2":above?"#fffbeb":"#f8fafc",outline:"none",width:42,textAlign:"center",color:exact?"#15803d":close?"#16a34a":below?"#dc2626":above?"#b45309":"#334155",cursor:"text"});
+
+    function ToggleBtn({val,cur,onClick,label}){
+      const on=cur===val;
+      return(
+        <button onClick={()=>onClick(val)} style={{padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:0,border:"1.5px solid "+(on?"#1e293b":"#e2e8f0"),background:on?"#1e293b":"#fff",color:on?"#fff":"#475569"}}>
+          {label}
+        </button>
+      );
+    }
 
     function App(){
       const [ws,setWs]=useState(nextFri());
@@ -178,7 +187,6 @@
 
       const sep=params.sepDecimal;
       const fmtH=h=>fmtDec(h,sep);
-
       const wd=DAYS.map((_,i)=>addD(ws,i));
       const wl=fmt(ws)+" au "+fmt(addD(ws,6));
       const iw=isoW(ws);
@@ -328,33 +336,34 @@
       const addEmp=()=>{setEmps(l=>[...l,mkE(ci)]);setCi(c=>(c+1)%COLORS.length);};
       const remEmp=id=>setEmps(l=>l.filter(x=>x.id!==id));
       const setEv=(di,f,v)=>setEff(l=>l.map((x,i)=>i===di?mg(x,{[f]:v}):x));
-      const setP=(f,v)=>setParams(p=>mg(p,{[f]:f==="sepDecimal"?v:(parseFloat(v)||0)}));
+      const setP=(f,v)=>setParams(p=>mg(p,{[f]:f==="sepDecimal"?v:f==="tolEffOn"?v:(parseFloat(v)||0)}));
 
-      const btnS={background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:0,padding:"6px 14px",cursor:"pointer",fontSize:16,color:"#334155"};
+      const btnS={background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:0,cursor:"pointer",color:"#334155"};
       const tabS=a=>({background:a?"#1e293b":"#fff",color:a?"#fff":"#64748b",border:"1.5px solid #e2e8f0",borderRadius:0,padding:"6px 18px",cursor:"pointer",fontSize:13,fontWeight:600});
 
       return(
         <div style={{fontFamily:"'Inter','Segoe UI',sans-serif",background:"#5a6080",minHeight:"100vh",padding:"24px 12px"}}>
           <div style={{margin:"0 auto",maxWidth:TW}}>
-            <div style={{display:"flex",alignItems:"stretch",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:12}}>
+
+            <div style={{display:"flex",alignItems:"stretch",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"center",flex:1}}>
-                <h1 style={{margin:0,fontSize:38,fontWeight:800,color:"#fff",fontFamily:"Georgia,serif",letterSpacing:"-0.5px",lineHeight:1}}>Horaire</h1>
+                <h1 style={{margin:0,fontSize:28,fontWeight:800,color:"#fff",fontFamily:"Georgia,serif",letterSpacing:"-0.5px",lineHeight:1}}>Horaire</h1>
               </div>
               <div style={{display:"flex",alignItems:"center",background:"#fff",border:"1.5px solid #e2e8f0",overflow:"hidden"}}>
-                <button onClick={()=>setWs(d=>addD(d,-7))} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:"#64748b",padding:"8px 14px",lineHeight:1}}>‹</button>
-                <div style={{padding:"0 18px",borderLeft:"1px solid #f1f5f9",borderRight:"1px solid #f1f5f9",minWidth:300,textAlign:"center"}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
-                    <span style={{fontSize:17,fontWeight:800,color:"#0f172a"}}>{wl}</span>
-                    <span style={{fontSize:17,fontWeight:800,color:"#94a3b8",whiteSpace:"nowrap"}}>· Sem. {iw}</span>
+                <button onClick={()=>setWs(d=>addD(d,-7))} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#64748b",padding:"6px 10px",lineHeight:1}}>‹</button>
+                <div style={{padding:"0 14px",borderLeft:"1px solid #f1f5f9",borderRight:"1px solid #f1f5f9",minWidth:260,textAlign:"center"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+                    <span style={{fontSize:14,fontWeight:800,color:"#0f172a"}}>{wl}</span>
+                    <span style={{fontSize:14,fontWeight:800,color:"#94a3b8",whiteSpace:"nowrap"}}>· Sem. {iw}</span>
                   </div>
                 </div>
-                <button onClick={()=>setWs(d=>addD(d,7))} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:"#64748b",padding:"8px 14px",lineHeight:1}}>›</button>
+                <button onClick={()=>setWs(d=>addD(d,7))} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#64748b",padding:"6px 10px",lineHeight:1}}>›</button>
               </div>
-              <div style={{display:"flex",gap:8,alignItems:"stretch"}}>
+              <div style={{display:"flex",gap:6,alignItems:"stretch"}}>
                 <Pill label="Total semaine" value={fmtH(grand)||"0"} color="#0f172a"/>
                 <Pill label="Moy. / équipier" value={emps.length?(fmtH(grand/emps.length)||"0"):"—"} color="#2563eb"/>
-                <button onClick={undo} title="Annuler (Ctrl+Z)" style={btnS}>↩</button>
-                <button onClick={redo} title="Rétablir (Ctrl+Shift+Z)" style={btnS}>↪</button>
+                <button onClick={undo} title="Annuler (Ctrl+Z)" style={{...btnS,padding:"4px 10px",fontSize:14}}>↩</button>
+                <button onClick={redo} title="Rétablir (Ctrl+Shift+Z)" style={{...btnS,padding:"4px 10px",fontSize:14}}>↪</button>
                 <div style={{display:"flex",overflow:"hidden",border:"1.5px solid #e2e8f0"}}>
                   <button onClick={()=>setPage("horaire")} style={tabS(page==="horaire")}>📅 Horaire</button>
                   <button onClick={()=>setPage("params")} style={tabS(page==="params")}>⚙️ Paramètres</button>
@@ -364,7 +373,7 @@
 
             {page==="params"&&(
               <div style={{background:"#fff",boxShadow:"0 1px 6px rgba(0,0,0,.1)",padding:"32px"}}>
-                <h2 style={{margin:"0 0 24px",fontSize:16,fontWeight:800,color:"#0f172a"}}>⚙️ Paramètres des effectifs</h2>
+                <h2 style={{margin:"0 0 24px",fontSize:16,fontWeight:800,color:"#0f172a"}}>⚙️ Paramètres</h2>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:32}}>
                   {[
                     {title:"Formule JOUR",bg:"#dbeafe",ps:[{label:"Décalage après ouverture",k:"jourDecalage",u:"h"},{label:"Heure limite journée",k:"jourLimite",u:"h"},{label:"Pondération intermédiaire",k:"jourPoids",u:"×"}]},
@@ -381,18 +390,30 @@
                 </div>
                 <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
+                    <div style={{width:10,height:10,borderRadius:2,background:"#dcfce7"}}/>
+                    <h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>TOLÉRANCE EFFECTIFS</h3>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:params.tolEffOn?16:0}}>
+                    <span style={{fontSize:12,color:"#475569"}}>Vert pâle si proche de la cible</span>
+                    <div style={{display:"flex",gap:8}}>
+                      <ToggleBtn val={true} cur={params.tolEffOn} onClick={v=>setP("tolEffOn",v)} label="Activé"/>
+                      <ToggleBtn val={false} cur={params.tolEffOn} onClick={v=>setP("tolEffOn",v)} label="Désactivé"/>
+                    </div>
+                  </div>
+                  {params.tolEffOn&&(
+                    <ParamRow label="Différence tolérée (±)" value={params.tolEff} onChange={v=>setP("tolEff",v)} unit="±" step="0.25"/>
+                  )}
+                </div>
+                <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
                     <div style={{width:10,height:10,borderRadius:2,background:"#e2e8f0"}}/>
                     <h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>FORMAT DES NOMBRES</h3>
                   </div>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <span style={{fontSize:12,color:"#475569"}}>Séparateur décimal</span>
                     <div style={{display:"flex",gap:8}}>
-                      {[{val:",",label:"Virgule  1,5"},{val:".",label:"Point  1.5"}].map(({val,label})=>(
-                        <button key={val} onClick={()=>setP("sepDecimal",val)}
-                          style={{padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:0,border:"1.5px solid "+(sep===val?"#1e293b":"#e2e8f0"),background:sep===val?"#1e293b":"#fff",color:sep===val?"#fff":"#475569"}}>
-                          {label}
-                        </button>
-                      ))}
+                      <ToggleBtn val="," cur={sep} onClick={v=>setP("sepDecimal",v)} label="Virgule  1,5"/>
+                      <ToggleBtn val="." cur={sep} onClick={v=>setP("sepDecimal",v)} label="Point  1.5"/>
                     </div>
                   </div>
                 </div>
@@ -408,7 +429,7 @@
                 <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/>
                   <tbody>
                     <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
-                      <td style={{padding:"8px 12px 6px 18px",fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>HEURES D'OUVERTURE</td>
+                      <td style={{padding:"5px 8px 5px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>HEURES D'OUVERTURE</td>
                       <td/>
                       {cin.map((ch,di)=>{
                         const kO=ck(di,"ouverture"),kF=ck(di,"fermeture");
@@ -435,31 +456,38 @@
                       <td/><td/>
                     </tr>
                     <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
-                      <td style={{padding:"6px 12px 8px 18px",fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>EFFECTIFS</td>
+                      <td style={{padding:"5px 8px 5px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>EFFECTIFS</td>
                       <td/>
                       {eff.map((ef,di)=>{
                         const{jour:cj,soir:cs}=calcEff(di);
-                        const mj=parseFloat(ef.jour)||0,ms=parseFloat(ef.soir)||0;
+                        const mj=parseFloat((ef.jour||"").replace(",","."))||0;
+                        const ms=parseFloat((ef.soir||"").replace(",","."))||0;
                         return(
                           <td key={di} style={mg({padding:0,textAlign:"center",verticalAlign:"middle"},bl(di))}>
                             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-                              {[{f:"jour",cv:cj,mn:mj},{f:"soir",cv:cs,mn:ms}].map(({f,cv,mn},fi)=>(
-                                <span key={f} style={{display:"flex",alignItems:"center",gap:4}}>
-                                  {fi>0&&<div style={{width:1,height:36,background:"#e2e8f0"}}/>}
-                                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                                    <span style={{fontSize:9,fontWeight:600,color:"#94a3b8",letterSpacing:"0.4px"}}>{f.toUpperCase()}</span>
-                                    <input type="text" value={ef[f]} onChange={e=>setEv(di,f,e.target.value)} maxLength={5} autoComplete="off" style={effS(mn>0&&eqEff(cv,mn))} placeholder="—" onPaste={e=>onPasteEff(e,di)}/>
-                                    <span style={{fontSize:9,fontWeight:700,color:mn===0?"#94a3b8":cv>=mn?"#16a34a":"#dc2626"}}>{cv>0?cv.toString().replace(".",sep):"—"}</span>
-                                  </div>
-                                </span>
-                              ))}
+                              {[{f:"jour",cv:cj,mn:mj},{f:"soir",cv:cs,mn:ms}].map(({f,cv,mn},fi)=>{
+                                const exact=mn>0&&eqEff(cv,mn);
+                                const close=!exact&&mn>0&&params.tolEffOn&&params.tolEff>0&&Math.abs(cv-mn)<=params.tolEff&&cv>0;
+                                const below=mn>0&&!exact&&!close&&cv<mn;
+                                const above=mn>0&&!exact&&cv>mn;
+                                return(
+                                  <span key={f} style={{display:"flex",alignItems:"center",gap:4}}>
+                                    {fi>0&&<div style={{width:1,height:36,background:"#e2e8f0"}}/>}
+                                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                                      <span style={{fontSize:9,fontWeight:600,color:"#94a3b8",letterSpacing:"0.4px"}}>{f.toUpperCase()}</span>
+                                      <input type="text" value={ef[f]} onChange={e=>setEv(di,f,e.target.value)} maxLength={5} autoComplete="off" style={effS(exact,close,below,above)} placeholder="—" onPaste={e=>onPasteEff(e,di)}/>
+                                      <span style={{fontSize:9,fontWeight:700,color:mn===0?"#94a3b8":cv>=mn?"#16a34a":"#dc2626"}}>{cv>0?cv.toString().replace(".",sep):"—"}</span>
+                                    </div>
+                                  </span>
+                                );
+                              })}
                             </div>
                           </td>
                         );
                       })}
                       <td/><td/>
                     </tr>
-                    <tr style={{borderBottom:"2px solid #c8cdd8",background:"#f8fafc",height:44}}>
+                    <tr style={{borderBottom:"2px solid #c8cdd8",background:"#f8fafc",height:26}}>
                       <td style={TH({textAlign:"left",paddingLeft:18})}>ÉQUIPIER</td>
                       <td style={TH({borderLeft:"1px solid #c8cdd8"})}>PARTICULARITÉ</td>
                       {DS.map((d,i)=>(
@@ -485,14 +513,14 @@
                       const bg=ri%2===0?"#f0f1f7":"#e0e1ed";
                       const tc=maxH&&tot>maxH?"#dc2626":tot>42.5?"#dc2626":tot>40?"#ea580c":"#16a34a";
                       return(
-                        <tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:84}}>
-                          <td style={{padding:"10px 12px 10px 18px",verticalAlign:"middle"}}>
+                        <tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
+                          <td style={{padding:"4px 12px 4px 18px",verticalAlign:"middle"}}>
                             <div style={{display:"flex",flexDirection:"column",gap:3}}>
                               <input placeholder="Prénom" value={row.prenom} onChange={e=>setEmp(row.id,"prenom",e.target.value)} style={niS()}/>
                               <input placeholder="Nom" value={row.nom} onChange={e=>setEmp(row.id,"nom",e.target.value)} style={mg(niS(),{fontWeight:400,color:"#64748b",fontSize:14})}/>
                             </div>
                           </td>
-                          <td style={{padding:"8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}>
+                          <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}>
                             <PartCell row={row} onChange={(f,v)=>setEmp(row.id,f,v)}/>
                           </td>
                           {row.days.map((day,di)=>{
@@ -549,7 +577,7 @@
                   </tbody>
                   <tfoot>
                     <tr style={{borderTop:"2px solid #c8cdd8",background:"#f8fafc"}}>
-                      <td style={{padding:"10px 12px 10px 18px",fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px"}}>TOTAL / JOUR</td>
+                      <td style={{padding:"6px 12px 6px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px"}}>TOTAL / JOUR</td>
                       <td style={{borderLeft:"1px solid #c8cdd8"}}/>
                       {DAYS.map((_,di)=>{const h=totD(di);return <td key={di} style={mg({textAlign:"center",padding:"10px 6px"},bl(di))}>{h>0?<span style={{fontSize:12,fontWeight:700,color:"#475569"}}>{fmtH(h)}</span>:<span style={{color:"#e2e8f0"}}>—</span>}</td>;})}
                       <td style={{textAlign:"center",padding:"10px 8px"}}><span style={{fontSize:13,fontWeight:800,color:"#0f172a"}}>{fmtH(grand)||"—"}</span></td>
