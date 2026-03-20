@@ -2,78 +2,48 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Horaire</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Inter','Segoe UI',sans-serif;background:#5a6080;min-height:100vh;}
-  input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{-webkit-appearance:none;}
-  input[type=number]{-moz-appearance:textfield;}
-  select{-webkit-appearance:none;-moz-appearance:none;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter','Segoe UI',sans-serif;background:#5a6080;min-height:100vh;}
+input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{-webkit-appearance:none;}
+input[type=number]{-moz-appearance:textfield;}
+select{-webkit-appearance:none;-moz-appearance:none;}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const {useState,useRef} = React;
+const {useState,useRef}=React;
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
-const DAYS  = ["Vendredi","Samedi","Dimanche","Lundi","Mardi","Mercredi","Jeudi"];
-const DS    = ["VEN","SAM","DIM","LUN","MAR","MER","JEU"];
-const PARTS = [
-  {value:"",label:"—"},{value:"Vacances",label:"Vacances"},
-  {value:"Sans solde",label:"Sans solde"},{value:"Max heures",label:"Heures Max"},
-  {value:"Personnalisé",label:"Personnalisé"},
-];
-const COLORS = ["#2563eb","#16a34a","#dc2626","#9333ea","#ea580c","#0891b2","#65a30d","#db2777","#d97706","#7c3aed"];
-const CE=140,CP=150,CD=128,CT=68,CX=32;
-const TW=CE+CP+CD*7+CT+CX;
-const EPS=0.02;
-const DEF_P={
-  jourDecalage:2,jourLimite:17,jourPoids:0.5,
-  soirDebut:18.1,soirLimite:20,soirPoids:0.5,
-  sepDecimal:",",tolEff:0,tolEffOn:false,
-  genMinQuart:4,genEcraser:false,
-  genDelaiApresOuverture:0.5,
-  genNbOuverture:3,genNbFermetureCinema:1,
-  genFermetureComptoir:true,
-  genSeuilHaut:24,genComptoirHaut:23,
-  genSeuilBas:22,genComptoirBas:22,
-};
-const PASS_LABELS=["Fermeture plancher","Ouverture","Proche ouverture → comptoir"];
-const PASS_COLORS=["#fde68a","#bfdbfe","#bbf7d0"];
-const PASS_BORDER=["#f59e0b","#3b82f6","#16a34a"];
-const PHASES=[
-  {label:"Fermetures",   groupes:(o,f,fe)=>[[o,f],[14,f],[16,f],[18,f],[20,f]]},
-  {label:"Ouv→Comptoir", groupes:(o,f,fe)=>[[o,fe]]},
-  {label:"Remplissage",  groupes:(o,f,fe)=>[[o,18],[18,fe]]},
-];
-const GEN_GROUPES=[
-  {label:"Ouverture → Fer. cinéma",   key:"ouv-ferH"},
-  {label:"14h → Fer. cinéma",         key:"14-ferH"},
-  {label:"16h → Fer. cinéma",         key:"16-ferH"},
-  {label:"18h → Fer. cinéma",         key:"18-ferH"},
-  {label:"20h → Fer. cinéma",         key:"20-ferH"},
-  {label:"Ouverture → Fer. comptoir", key:"ouv-ferEff"},
-  {label:"Ouverture → 18h",           key:"ouv-18"},
-  {label:"18h → Fer. comptoir",       key:"18-ferEff"},
-];
+const DAYS=["Vendredi","Samedi","Dimanche","Lundi","Mardi","Mercredi","Jeudi"];
+const DS=["VEN","SAM","DIM","LUN","MAR","MER","JEU"];
+const PARTS=[{value:"",label:"—"},{value:"Vacances",label:"Vacances"},{value:"Sans solde",label:"Sans solde"},{value:"Max heures",label:"Heures Max"},{value:"Personnalisé",label:"Personnalisé"}];
+const COLORS=["#2563eb","#16a34a","#dc2626","#9333ea","#ea580c","#0891b2","#65a30d","#db2777","#d97706","#7c3aed"];
+const CE=140,CP=150,CD=128,CT=68,CX=32,TW=CE+CP+CD*7+CT+CX,EPS=0.02;
+const DEF_P={jourDecalage:2,jourLimite:17,jourPoids:0.5,soirDebut:18.1,soirLimite:20,soirPoids:0.5,sepDecimal:",",tolEff:0,tolEffOn:false,genMinQuart:4,genEcraser:false,genDelaiApresOuverture:0.5,genSeuilOuverture:12,genNbOuverture:3,genNbFermetureCinema:1,genFermetureComptoir:true,genSeuilHaut:24,genComptoirHaut:23,genSeuilBas:22,genComptoirBas:22};
+const PHASES=[{label:"Fermetures",groupes:(o,f,fe)=>[[o,f],[14,f],[16,f],[18,f],[20,f]]},{label:"Ouv→Comptoir",groupes:(o,f,fe)=>[[o,fe]]},{label:"Remplissage",groupes:(o,f,fe)=>[[o,18],[18,fe]]}];
+const GEN_GROUPES=[{label:"Ouverture → Fer. cinéma",key:"ouv-ferH"},{label:"14h → Fer. cinéma",key:"14-ferH"},{label:"16h → Fer. cinéma",key:"16-ferH"},{label:"18h → Fer. cinéma",key:"18-ferH"},{label:"20h → Fer. cinéma",key:"20-ferH"},{label:"Ouverture → Fer. comptoir",key:"ouv-ferEff"},{label:"Ouverture → 18h",key:"ouv-18"},{label:"18h → Fer. comptoir",key:"18-ferEff"}];
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
-const addD   =(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
-const fmt    =(d,s=false)=>d.toLocaleDateString("fr-CA",s?{day:"2-digit",month:"short"}:{day:"numeric",month:"long"});
-const mg     =(a,b)=>Object.assign({},a,b);
-const toH    =t=>{if(!t)return null;const[h,m]=t.split(":").map(Number);return h+(m||0)/60;};
-const toStr  =h=>{const hh=Math.floor(h),mm=Math.round((h-hh)*60);return hh.toString().padStart(2,"0")+":"+mm.toString().padStart(2,"0");};
-const calcH  =(a,b)=>{if(!a||!b)return 0;const[ah,am]=a.split(":").map(Number),[bh,bm]=b.split(":").map(Number);const d=(bh*60+bm)-(ah*60+am);return d>0?d/60:0;};
-const fmtDec =(h,sep)=>{if(!h)return null;return(Math.round(h*100)/100).toString().replace(".",sep);};
-const fmtHs  =h=>{if(!h)return null;const hh=Math.floor(h),mm=Math.round((h-hh)*60);return mm?hh+"h"+mm.toString().padStart(2,"0"):hh+"h";};
-const eqEff  =(a,b)=>Math.abs(a-b)<0.001;
+const addD=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
+const fmt=(d,s=false)=>d.toLocaleDateString("fr-CA",s?{day:"2-digit",month:"short"}:{day:"numeric",month:"long"});
+const mg=(a,b)=>Object.assign({},a,b);
+const toH=t=>{if(!t)return null;const[h,m]=t.split(":").map(Number);return h+(m||0)/60;};
+const toStr=h=>{const hh=Math.floor(h),mm=Math.round((h-hh)*60);return hh.toString().padStart(2,"0")+":"+mm.toString().padStart(2,"0");};
+const calcH=(a,b)=>{if(!a||!b)return 0;const[ah,am]=a.split(":").map(Number),[bh,bm]=b.split(":").map(Number);const d=(bh*60+bm)-(ah*60+am);return d>0?d/60:0;};
+const fmtDec=(h,sep)=>{if(!h)return null;return(Math.round(h*100)/100).toString().replace(".",sep);};
+const fmtHs=h=>{if(!h)return null;const hh=Math.floor(h),mm=Math.round((h-hh)*60);return mm?hh+"h"+mm.toString().padStart(2,"0"):hh+"h";};
+const eqEff=(a,b)=>Math.abs(a-b)<0.001;
 const mkDispo=()=>DAYS.map(()=>({debut:"",fin:""}));
-const normT  =v=>{
+const normT=v=>{
   if(!v)return"";const s=v.trim();
   if(/^\d{1,2}[,\.]\d+$/.test(s)){const[hP,dP]=s.replace(",",".").split(".");return parseInt(hP).toString().padStart(2,"0")+":"+Math.round(parseFloat("0."+dP)*60).toString().padStart(2,"0");}
   const r=s.replace("h",":");
@@ -86,132 +56,189 @@ const isoW=d=>{const r=new Date(d);r.setHours(0,0,0,0);r.setDate(r.getDate()+3-(
 const nextFri=()=>{const t=new Date(),d=t.getDay(),f=new Date(t);f.setDate(t.getDate()+(5-d+7)%7+7);f.setHours(0,0,0,0);return f;};
 const filterEmpty=rows=>{const keep=rows[0].map((_,ci)=>rows.some(r=>r[ci]&&r[ci].trim()!=="")).reduce((acc,ok,ci)=>{if(ok)acc.push(ci);return acc;},[]);return rows.map(r=>keep.map(ci=>r[ci]||""));};
 
+// ─── Données ──────────────────────────────────────────────────────────────────
 let uid=1;
 const mkE=(ci=0)=>({id:uid++,prenom:"",nom:"",particularite:"",maxH:"",noteP:"",ci,days:DAYS.map(()=>({debut:"",fin:""})),dispo:mkDispo()});
 const EMPS=[
-  {...mkE(0),prenom:"Sophie",nom:"Grenier"},
-  {...mkE(1),prenom:"Isabella",nom:"Henao Gomez"},
-  {...mkE(2),prenom:"Christophe",nom:"Duchesne"},
-  {...mkE(3),prenom:"Alexis",nom:"Caron"},
-  {...mkE(4),prenom:"Stefan",nom:"Sava"},
-  {...mkE(5),prenom:"Zach",nom:"Dunn"},
-  {...mkE(6),prenom:"Zoé",nom:"Amirault"},
-  {...mkE(7),prenom:"Mel",nom:"Tinker Dubé"},
-  {...mkE(8),prenom:"Daphnée",nom:"Nadeau"},
-  {...mkE(9),prenom:"Justine",nom:"Corriveau"},
-  {...mkE(0),prenom:"Williams",nom:"Quirion-Noé"},
-  {...mkE(1),prenom:"Léanne",nom:"Caron"},
-  {...mkE(2),prenom:"Suraya",nom:"Chakri"},
-  {...mkE(3),prenom:"Zach",nom:"Haimeur"},
-  {...mkE(4),prenom:"Léo",nom:"Rancourt"},
-  {...mkE(5),prenom:"Allyson",nom:"Vaillancourt"},
-  {...mkE(6),prenom:"Ariane",nom:"Danis"},
-  {...mkE(7),prenom:"Vincent",nom:"Marcouiller"},
-  {...mkE(8),prenom:"Anthony",nom:"Gingras"},
-  {...mkE(9),prenom:"Felipe",nom:"Gamez Choque"},
-  {...mkE(0),prenom:"Ariane",nom:"Lévesque"},
-  {...mkE(1),prenom:"Antoine",nom:"Desfossés"},
+  {...mkE(0),prenom:"Sophie",nom:"Grenier"},{...mkE(1),prenom:"Isabella",nom:"Henao Gomez"},
+  {...mkE(2),prenom:"Christophe",nom:"Duchesne"},{...mkE(3),prenom:"Alexis",nom:"Caron"},
+  {...mkE(4),prenom:"Stefan",nom:"Sava"},{...mkE(5),prenom:"Zach",nom:"Dunn"},
+  {...mkE(6),prenom:"Zoé",nom:"Amirault"},{...mkE(7),prenom:"Mel",nom:"Tinker Dubé"},
+  {...mkE(8),prenom:"Daphnée",nom:"Nadeau"},{...mkE(9),prenom:"Justine",nom:"Corriveau"},
+  {...mkE(0),prenom:"Williams",nom:"Quirion-Noé"},{...mkE(1),prenom:"Léanne",nom:"Caron"},
+  {...mkE(2),prenom:"Suraya",nom:"Chakri"},{...mkE(3),prenom:"Zach",nom:"Haimeur"},
+  {...mkE(4),prenom:"Léo",nom:"Rancourt"},{...mkE(5),prenom:"Allyson",nom:"Vaillancourt"},
+  {...mkE(6),prenom:"Ariane",nom:"Danis"},{...mkE(7),prenom:"Vincent",nom:"Marcouiller"},
+  {...mkE(8),prenom:"Anthony",nom:"Gingras"},{...mkE(9),prenom:"Felipe",nom:"Gamez Choque"},
+  {...mkE(0),prenom:"Ariane",nom:"Lévesque"},{...mkE(1),prenom:"Antoine",nom:"Desfossés"},
   {...mkE(2),prenom:"Étienne",nom:"Jourdain"},
 ];
+const TEST_CIN=[{ouverture:"11:30",fermeture:"24:00"},{ouverture:"10:45",fermeture:"24:00"},{ouverture:"11:30",fermeture:"22:15"},{ouverture:"12:00",fermeture:"22:15"},{ouverture:"11:30",fermeture:"22:15"},{ouverture:"12:00",fermeture:"22:15"},{ouverture:"12:00",fermeture:"22:15"}];
+const TEST_EFF=[{jour:"3,5",soir:"3"},{jour:"7",soir:"4"},{jour:"6,5",soir:"4"},{jour:"7",soir:"3"},{jour:"6,5",soir:"3"},{jour:"4",soir:"3"},{jour:"3",soir:"3"}];
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const bl  =i=>({borderLeft:"1px solid #c8cdd8",borderRight:i===6?"1px solid #c8cdd8":undefined});
-const TH  =(x={})=>Object.assign({padding:"5px 8px",textAlign:"center",fontSize:10.5,fontWeight:700,color:"#64748b",letterSpacing:"0.6px",background:"#f8fafc"},x);
-const niS =()=>({display:"block",width:"100%",border:"none",padding:0,fontSize:13,fontWeight:600,color:"#1e293b",background:"transparent",outline:"none",boxSizing:"border-box"});
+const bl=i=>({borderLeft:"1px solid #c8cdd8",borderRight:i===6?"1px solid #c8cdd8":undefined});
+const TH=(x={})=>Object.assign({padding:"5px 8px",textAlign:"center",fontSize:10.5,fontWeight:700,color:"#64748b",letterSpacing:"0.6px",background:"#f8fafc"},x);
+const niS=()=>({display:"block",width:"100%",border:"none",padding:0,fontSize:13,fontWeight:600,color:"#1e293b",background:"transparent",outline:"none",boxSizing:"border-box"});
 const selS={border:"none",fontSize:12,color:"#475569",background:"transparent",outline:"none",cursor:"pointer",appearance:"none",textAlign:"center",fontWeight:500,width:"100%"};
 const uSty={border:"none",borderBottom:"1px solid #94a3b8",padding:"1px 2px",fontSize:12,outline:"none",color:"#334155",background:"transparent"};
-const tiS =(filled,bg,focused)=>({border:"1px "+(focused?"dashed #0f172a":"solid "+(filled?"#a0a8b8":"#c8cdd8")),borderRadius:5,padding:"2px 5px",fontSize:13,background:focused?"#e0f0e8":bg,outline:"none",width:72,minWidth:72,maxWidth:72,textAlign:"center",color:filled?"#0f172a":"#9ba3af",cursor:"text",fontWeight:500,transition:"border .1s",boxSizing:"border-box"});
+const tiS=(filled,bg,focused)=>({border:"1px "+(focused?"dashed #0f172a":"solid "+(filled?"#a0a8b8":"#c8cdd8")),borderRadius:5,padding:"2px 5px",fontSize:13,background:focused?"#e0f0e8":bg,outline:"none",width:72,minWidth:72,maxWidth:72,textAlign:"center",color:filled?"#0f172a":"#9ba3af",cursor:"text",fontWeight:500,transition:"border .1s",boxSizing:"border-box"});
 const cinS=(bg,focused)=>({border:"1px "+(focused?"dashed #0f172a":"solid #c8cdd8"),borderRadius:5,padding:"2px 5px",fontSize:13,background:focused?"#e0f0e8":bg,outline:"none",width:72,textAlign:"center",color:"#0f172a",cursor:"text",fontWeight:400});
 const effS=(exact,close,below,above)=>({border:"1px solid "+(exact?"#16a34a":close?"#86efac":below?"#fca5a5":above?"#fcd34d":"#e2e8f0"),borderRadius:5,padding:"2px",fontSize:12,fontWeight:600,background:exact?"#dcfce7":close?"#f0fdf4":below?"#fef2f2":above?"#fffbeb":"#f8fafc",outline:"none",width:42,textAlign:"center",color:exact?"#15803d":close?"#16a34a":below?"#dc2626":above?"#b45309":"#334155",cursor:"text"});
 const totColor=(tot,maxH)=>maxH&&tot>maxH?"#dc2626":tot>42.5?"#dc2626":tot>40?"#ea580c":"#16a34a";
 
 // ─── Sous-composants ──────────────────────────────────────────────────────────
-const Cols=()=>(
-  <colgroup>
-    <col style={{width:CE}}/><col style={{width:CP}}/>
-    {DAYS.map((_,i)=><col key={i} style={{width:CD}}/>)}
-    <col style={{width:CT}}/><col style={{width:CX}}/>
-  </colgroup>
-);
-const Pill=({label,value,color})=>(
-  <div style={{background:"#fff",border:"1.5px solid #e2e8f0",padding:"4px 12px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",alignSelf:"stretch"}}>
-    <div style={{fontSize:9,color:"#94a3b8",fontWeight:600,letterSpacing:"0.5px",textTransform:"uppercase"}}>{label}</div>
-    <div style={{fontSize:13,fontWeight:800,color,marginTop:1}}>{value}</div>
-  </div>
-);
-const ToggleBtn=({val,cur,onClick,label})=>{
-  const on=cur===val;
-  return <button onClick={()=>onClick(val)} style={{padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:0,border:"1.5px solid "+(on?"#1e293b":"#e2e8f0"),background:on?"#1e293b":"#fff",color:on?"#fff":"#475569"}}>{label}</button>;
-};
-const PartSelect=({value,onChange})=>(
-  <select value={value} onChange={e=>onChange("particularite",e.target.value)} style={selS}>
-    {PARTS.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}
-  </select>
-);
+const Cols=()=>(<colgroup><col style={{width:CE}}/><col style={{width:CP}}/>{DAYS.map((_,i)=><col key={i} style={{width:CD}}/>)}<col style={{width:CT}}/><col style={{width:CX}}/></colgroup>);
+const Pill=({label,value,color})=>(<div style={{background:"#fff",border:"1.5px solid #e2e8f0",padding:"4px 12px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",alignSelf:"stretch"}}><div style={{fontSize:9,color:"#94a3b8",fontWeight:600,letterSpacing:"0.5px",textTransform:"uppercase"}}>{label}</div><div style={{fontSize:13,fontWeight:800,color,marginTop:1}}>{value}</div></div>);
+const ToggleBtn=({val,cur,onClick,label})=>{const on=cur===val;return <button onClick={()=>onClick(val)} style={{padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:0,border:"1.5px solid "+(on?"#1e293b":"#e2e8f0"),background:on?"#1e293b":"#fff",color:on?"#fff":"#475569"}}>{label}</button>;};
+const PartSelect=({value,onChange})=>(<select value={value} onChange={e=>onChange("particularite",e.target.value)} style={selS}>{PARTS.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select>);
+
 function PartCell({row,onChange}){
-  const[localMax,setLocalMax]=useState(row.maxH||"");
-  const[localNote,setLocalNote]=useState(row.noteP||"");
-  const prevMax=useRef(row.maxH),prevNote=useRef(row.noteP);
-  if(row.maxH!==prevMax.current){prevMax.current=row.maxH;setLocalMax(row.maxH||"");}
-  if(row.noteP!==prevNote.current){prevNote.current=row.noteP;setLocalNote(row.noteP||"");}
-  const confirmMax=()=>{if(localMax.trim())onChange("maxH",localMax.trim());};
-  const confirmNote=()=>{if(localNote.trim())onChange("noteP",localNote.trim());};
+  const[lMax,setLMax]=useState(row.maxH||""),[lNote,setLNote]=useState(row.noteP||"");
+  const pMax=useRef(row.maxH),pNote=useRef(row.noteP);
+  if(row.maxH!==pMax.current){pMax.current=row.maxH;setLMax(row.maxH||"");}
+  if(row.noteP!==pNote.current){pNote.current=row.noteP;setLNote(row.noteP||"");}
   if(row.particularite==="Max heures"){
-    if(row.maxH)return <span onClick={()=>{onChange("maxH","");setLocalMax("");}} style={{fontSize:12,color:"#475569",cursor:"pointer",textDecoration:"underline dotted"}}>{row.maxH} heures max</span>;
-    return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><PartSelect value={row.particularite} onChange={onChange}/><div style={{display:"flex",alignItems:"center",gap:4}}><input type="text" value={localMax} onChange={e=>setLocalMax(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();confirmMax();}}} placeholder="h max" maxLength={5} style={mg(uSty,{width:50,textAlign:"center"})}/>{localMax.trim()&&<span onClick={confirmMax} style={{fontSize:14,cursor:"pointer",color:"#16a34a",fontWeight:700}}>✔</span>}</div></div>);
+    if(row.maxH)return <span onClick={()=>{onChange("maxH","");setLMax("");}} style={{fontSize:12,color:"#475569",cursor:"pointer",textDecoration:"underline dotted"}}>{row.maxH} heures max</span>;
+    return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><PartSelect value={row.particularite} onChange={onChange}/><div style={{display:"flex",alignItems:"center",gap:4}}><input type="text" value={lMax} onChange={e=>setLMax(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(lMax.trim())onChange("maxH",lMax.trim());}}} placeholder="h max" maxLength={5} style={mg(uSty,{width:50,textAlign:"center"})}/>{lMax.trim()&&<span onClick={()=>{if(lMax.trim())onChange("maxH",lMax.trim());}} style={{fontSize:14,cursor:"pointer",color:"#16a34a",fontWeight:700}}>✔</span>}</div></div>);
   }
   if(row.particularite==="Personnalisé"){
-    if(row.noteP)return <span onClick={()=>{onChange("noteP","");setLocalNote("");}} style={{fontSize:12,color:"#475569",cursor:"pointer",textDecoration:"underline dotted"}}>{row.noteP}</span>;
-    return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><PartSelect value={row.particularite} onChange={onChange}/><div style={{display:"flex",alignItems:"center",gap:4}}><input type="text" value={localNote} onChange={e=>setLocalNote(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();confirmNote();}}} placeholder="texte..." maxLength={60} style={mg(uSty,{width:110,textAlign:"left"})}/>{localNote.trim()&&<span onClick={confirmNote} style={{fontSize:14,cursor:"pointer",color:"#16a34a",fontWeight:700}}>✔</span>}</div></div>);
+    if(row.noteP)return <span onClick={()=>{onChange("noteP","");setLNote("");}} style={{fontSize:12,color:"#475569",cursor:"pointer",textDecoration:"underline dotted"}}>{row.noteP}</span>;
+    return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><PartSelect value={row.particularite} onChange={onChange}/><div style={{display:"flex",alignItems:"center",gap:4}}><input type="text" value={lNote} onChange={e=>setLNote(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(lNote.trim())onChange("noteP",lNote.trim());}}} placeholder="texte..." maxLength={60} style={mg(uSty,{width:110,textAlign:"left"})}/>{lNote.trim()&&<span onClick={()=>{if(lNote.trim())onChange("noteP",lNote.trim());}} style={{fontSize:14,cursor:"pointer",color:"#16a34a",fontWeight:700}}>✔</span>}</div></div>);
   }
   return <PartSelect value={row.particularite} onChange={onChange}/>;
 }
 function ParamRow({label,value,onChange,unit,step}){
-  return(
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-      <span style={{fontSize:12,color:"#475569",flex:1}}>{label}</span>
-      <div style={{display:"flex",alignItems:"center",gap:6}}>
-        <input type="number" value={value} onChange={e=>onChange(e.target.value)} step={step||"0.1"} style={{border:"1px solid #e2e8f0",padding:"4px 12px",fontSize:13,fontWeight:600,color:"#0f172a",width:100,textAlign:"left",outline:"none",borderRadius:0}}/>
-        <span style={{fontSize:11,color:"#94a3b8",minWidth:16}}>{unit}</span>
-      </div>
-    </div>
-  );
+  return(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}><span style={{fontSize:12,color:"#475569",flex:1}}>{label}</span><div style={{display:"flex",alignItems:"center",gap:6}}><input type="number" value={value} onChange={e=>onChange(e.target.value)} step={step||"0.1"} style={{border:"1px solid #e2e8f0",padding:"4px 12px",fontSize:13,fontWeight:600,color:"#0f172a",width:100,textAlign:"left",outline:"none",borderRadius:0}}/><span style={{fontSize:11,color:"#94a3b8",minWidth:16}}>{unit}</span></div></div>);
 }
 function GenPanel({onGen}){
-  return(
-    <div style={{position:"fixed",right:24,top:80,zIndex:1000,width:190,background:"#fff",boxShadow:"0 4px 20px rgba(0,0,0,.18)",border:"1.5px solid #e2e8f0",borderRadius:6}}>
-      <div style={{padding:"8px 10px 6px",borderBottom:"1px solid #f1f5f9",background:"#f8fafc",borderRadius:"4px 4px 0 0"}}>
-        <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px"}}>GÉNÉRER</span>
-      </div>
-      <div style={{padding:"8px 8px 10px",display:"flex",flexDirection:"column",gap:4}}>
-        {GEN_GROUPES.map(({label,key})=>(
-          <button key={key} onClick={()=>onGen(key)}
-            style={{padding:"6px 10px",fontSize:11,fontWeight:600,cursor:"pointer",borderRadius:4,border:"1.5px solid #e2e8f0",background:"#f8fafc",color:"#475569",textAlign:"left",lineHeight:1.4,transition:"all .1s"}}
-            onMouseEnter={e=>{e.currentTarget.style.background="#1e293b";e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor="#1e293b";}}
-            onMouseLeave={e=>{e.currentTarget.style.background="#f8fafc";e.currentTarget.style.color="#475569";e.currentTarget.style.borderColor="#e2e8f0";}}>
-            {label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+  return(<div style={{position:"fixed",right:24,top:80,zIndex:1000,width:190,background:"#fff",boxShadow:"0 4px 20px rgba(0,0,0,.18)",border:"1.5px solid #e2e8f0",borderRadius:6}}><div style={{padding:"8px 10px 6px",borderBottom:"1px solid #f1f5f9",background:"#f8fafc",borderRadius:"4px 4px 0 0"}}><span style={{fontSize:10,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px"}}>GÉNÉRER</span></div><div style={{padding:"8px 8px 10px",display:"flex",flexDirection:"column",gap:4}}>{GEN_GROUPES.map(({label,key})=>(<button key={key} onClick={()=>onGen(key)} style={{padding:"6px 10px",fontSize:11,fontWeight:600,cursor:"pointer",borderRadius:4,border:"1.5px solid #e2e8f0",background:"#f8fafc",color:"#475569",textAlign:"left",lineHeight:1.4}} onMouseEnter={e=>{e.currentTarget.style.background="#1e293b";e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor="#1e293b";}} onMouseLeave={e=>{e.currentTarget.style.background="#f8fafc";e.currentTarget.style.color="#475569";e.currentTarget.style.borderColor="#e2e8f0";}}>{label}</button>))}</div></div>);
 }
-function FloatingPanel({dispoFilter,setDispoFilter}){
-  return(
-    <div style={{position:"fixed",right:24,top:120,zIndex:1000,width:176,background:"#fff",boxShadow:"0 4px 20px rgba(0,0,0,.18)",border:"1.5px solid #e2e8f0",borderRadius:6}}>
-      <div style={{padding:"8px 10px 6px",borderBottom:"1px solid #f1f5f9",background:"#f8fafc",borderRadius:"4px 4px 0 0"}}>
-        <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px"}}>VISUALISER</span>
-      </div>
-      <div style={{padding:"8px 8px 10px",display:"flex",flexDirection:"column",gap:6}}>
-        {PASS_LABELS.map((label,i)=>{
-          const on=dispoFilter===i;
-          return <button key={i} onClick={()=>setDispoFilter(on?null:i)} style={{padding:"7px 10px",fontSize:11,fontWeight:600,cursor:"pointer",borderRadius:4,border:"1.5px solid "+(on?PASS_BORDER[i]:"#e2e8f0"),background:on?PASS_COLORS[i]:"#f8fafc",color:on?PASS_BORDER[i]:"#64748b",textAlign:"left",lineHeight:1.4}}><div style={{fontSize:9,fontWeight:700,letterSpacing:"0.4px",opacity:0.7,marginBottom:2}}>PASSE {i+1}</div>{label}</button>;
-        })}
-        {dispoFilter!==null&&<button onClick={()=>setDispoFilter(null)} style={{marginTop:2,padding:"5px",fontSize:11,cursor:"pointer",border:"1px solid #e2e8f0",borderRadius:4,background:"#fff",color:"#94a3b8"}}>Effacer</button>}
-      </div>
-    </div>
-  );
-}
+
+// ─── Import PDF (hors composant) ─────────────────────────────────────────────
+const normName=s=>s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g," ").replace(/\s+/g," ").trim();
+
+const cleanPDFName=s=>s
+  .replace(/\d{4}-\d{2}-\d{2}/g,"")
+  .replace(/\d{6,}/g,"")
+  .replace(/\b\d{1,4}\b/g,"")
+  .replace(/\bhoraire\b/gi,"")
+  .replace(/\bdisponibilit[eé]\b/gi,"")
+  .replace(/\s+/g," ").trim();
+
+const matchEmpIdx=(name,emps)=>{
+  const nw=normName(name).split(" ").filter(w=>w.length>1);
+  if(!nw.length)return -1;
+  let best=-1,bestScore=0;
+  emps.forEach((e,i)=>{
+    const ew=normName(e.prenom+" "+e.nom).split(" ").filter(w=>w.length>1);
+    if(!ew.length)return;
+    const matched=nw.filter(w=>ew.some(x=>x===w||x.startsWith(w)||w.startsWith(x))).length;
+    const score=matched/Math.max(nw.length,ew.length);
+    if(score>bestScore){bestScore=score;best=i;}
+  });
+  return bestScore>=0.4?best:-1;
+};
+
+const parsePDF=async(file,emps,getDispo)=>{
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+
+  // Extraire tous les items texte groupés par ligne (Y proche)
+  const allRows=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const content=await page.getTextContent();
+    const items=content.items
+      .map(it=>({t:it.str.trim(),x:Math.round(it.transform[4]),y:Math.round(it.transform[5])}))
+      .filter(it=>it.t);
+    const groups=[];
+    items.forEach(it=>{
+      const g=groups.find(r=>Math.abs(r.y-it.y)<6);
+      if(g)g.items.push(it);
+      else groups.push({y:it.y,items:[it]});
+    });
+    groups.sort((a,b)=>b.y-a.y);
+    groups.forEach(g=>{g.items.sort((a,b)=>a.x-b.x);allRows.push(g.items);});
+  }
+
+  const isDataLine=row=>row.some(it=>/\d{4}-\d{2}-\d{2}/.test(it.t));
+
+  // Collecter tous les X de plages horaires et les regrouper en 7 clusters
+  const rePlage=/^(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/;
+  const allXs=[];
+  for(const row of allRows){
+    row.forEach(it=>{if(rePlage.test(it.t))allXs.push(it.x);});
+  }
+  // Trier et regrouper par proximité (gap > 10px = nouvelle colonne)
+  allXs.sort((a,b)=>a-b);
+  const clusters=[];
+  allXs.forEach(x=>{
+    const last=clusters[clusters.length-1];
+    if(!last||x-last.max>15)clusters.push({xs:[x],max:x});
+    else{last.xs.push(x);last.max=x;}
+  });
+  // Garder les 7 clusters les plus peuplés et les trier par X
+  const colXs=clusters
+    .sort((a,b)=>b.xs.length-a.xs.length)
+    .slice(0,7)
+    .map(c=>Math.round(c.xs.reduce((s,x)=>s+x,0)/c.xs.length))
+    .sort((a,b)=>a-b);
+
+  // Assigner les plages aux jours par position X
+  // Jours sans plage restent {debut:"",fin:""} — indisponible
+  const assignToDay=rowItems=>{
+    const dispo=DAYS.map(()=>({debut:"",fin:""}));
+    if(!colXs)return dispo;
+    rowItems.forEach(it=>{
+      const m=it.t.match(rePlage);
+      if(!m)return;
+      let bestDi=0,bestDist=Infinity;
+      colXs.forEach((cx,di)=>{const dist=Math.abs(it.x-cx);if(dist<bestDist){bestDist=dist;bestDi=di;}});
+      dispo[bestDi]={debut:m[1],fin:m[2]};
+    });
+    return dispo;
+  };
+
+  console.log("colXs détectés:",colXs);
+  console.log("Clusters:",clusters.sort((a,b)=>a.xs[0]-b.xs[0]).map(c=>({x:Math.round(c.xs.reduce((s,x)=>s+x,0)/c.xs.length),count:c.xs.length})));
+
+  // Construire les entrées : accumuler les noms jusqu'à la ligne de données
+  const entries=[];
+  let pendingName=[];
+  for(const row of allRows){
+    if(isDataLine(row)){
+      const typeItem=row.find(it=>/^(disponibilit[eé]|horaire)$/i.test(it.t));
+      const type=typeItem?typeItem.t.toLowerCase():"";
+      // Trouver la position X de la date pour isoler les fragments de nom qui précèdent
+      const dateItem=row.find(it=>/\d{4}-\d{2}-\d{2}/.test(it.t));
+      const dateX=dateItem?dateItem.x:Infinity;
+      const inlineNameItems=row.filter(it=>it.x<dateX&&!/^\d+$/.test(it.t)&&!/\d{4}-\d{2}-\d{2}/.test(it.t));
+      const allNameItems=[...pendingName,...inlineNameItems];
+      entries.push({nom:allNameItems.map(it=>it.t).join(" "),type,rest:row});
+      pendingName=[];
+    } else {
+      // Fragments de nom : seulement les items composés de lettres et tirets
+      const nameItems=row.filter(it=>/^[a-zA-ZÀ-ÿ][a-zA-ZÀ-ÿ\-]*$/.test(it.t));
+      pendingName.push(...nameItems);
+    }
+  }
+
+  // Importer uniquement les lignes Disponibilite
+  let matched=0,skipped=0;
+  const newEmps=emps.map(e=>({...e,dispo:getDispo(e).map(d=>({...d}))}));
+  for(const{nom,type,rest}of entries){
+    if(!type.includes("disponibilit"))continue;
+    const cleaned=cleanPDFName(nom);
+    const idx=matchEmpIdx(cleaned,emps);
+    const dispoResult=assignToDay(rest);
+    console.log("NOM:",JSON.stringify(cleaned),"→",idx>=0?emps[idx].prenom+" "+emps[idx].nom:"NON TROUVÉ","| dispo:",dispoResult.map(d=>d.debut?d.debut+"-"+d.fin:"—").join(", "));
+    if(idx<0){skipped++;continue;}
+    newEmps[idx]={...newEmps[idx],dispo:dispoResult};
+    matched++;
+  }
+  return{newEmps,matched,skipped};
+};
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 function App(){
@@ -226,9 +253,10 @@ function App(){
   const[params,setParams]=useState(DEF_P);
   const[genPhase,setGenPhase]=useState(0);
   const[genMsg,setGenMsg]=useState(null);
-  const[dispoFilter,setDispoFilter]=useState(null);
+  const[importMsg,setImportMsg]=useState(null);
   const refs=useRef({});
   const cinRefs=useRef({});
+  const importRef=useRef(null);
   const hist=useRef([]),fut=useRef([]),before=useRef(null);
   const cinHist=useRef([]),cinFut=useRef([]),cinBefore=useRef(null);
 
@@ -257,6 +285,7 @@ function App(){
     });
     return{jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};
   };
+
   const getFerEff=ferStr=>{
     if(!params.genFermetureComptoir)return ferStr;
     const fH=toH(ferStr);if(fH===null)return ferStr;
@@ -264,17 +293,8 @@ function App(){
     if(fH>=params.genSeuilBas&&fH<params.genSeuilHaut)return toStr(params.genComptoirBas);
     return ferStr;
   };
-  const isEligibleViz=(emp,di,pass)=>{
-    if(emp.particularite==="Vacances"||emp.particularite==="Sans solde")return false;
-    const d=getDispo(emp);if(!d[di].debut&&!d[di].fin)return false;
-    const ouvH=toH(cin[di].ouverture),ferH=toH(cin[di].fermeture);
-    const dH=d[di].debut?toH(d[di].debut):null,fH=d[di].fin?toH(d[di].fin):null;
-    if(pass===0)return fH!==null&&fH>=ferH-EPS;
-    if(pass===1)return dH===null||dH<=ouvH+EPS;
-    if(pass===2)return fH!==null&&fH>=18-EPS;
-    return false;
-  };
 
+  // ── Historique ──
   const cap=l=>{if(before.current===null)before.current=JSON.stringify(l);};
   const commit=()=>{if(before.current!==null){hist.current.push(before.current);if(hist.current.length>50)hist.current.shift();fut.current=[];before.current=null;}};
   const undo=()=>{commit();if(!hist.current.length)return;setEmps(c=>{fut.current.push(JSON.stringify(c));return JSON.parse(hist.current.pop());});};
@@ -284,6 +304,7 @@ function App(){
   const undoCin=()=>{commitCin();if(!cinHist.current.length)return;setCin(c=>{cinFut.current.push(JSON.stringify(c));return JSON.parse(cinHist.current.pop());});};
   const redoCin=()=>{if(!cinFut.current.length)return;setCin(c=>{cinHist.current.push(JSON.stringify(c));return JSON.parse(cinFut.current.pop());});};
 
+  // ── Modifications ──
   const updDay=(id,di,f,v)=>setEmps(l=>{cap(l);return l.map(x=>x.id!==id?x:mg(x,{days:x.days.map((d,i)=>i===di?mg(d,{[f]:v}):d)}));});
   const blurDay=(id,di,f,v)=>{commit();const n=normT(v);setEmps(l=>l.map(x=>x.id!==id?x:mg(x,{days:x.days.map((d,i)=>i===di?mg(d,{[f]:n}):d)})));};
   const delDay=(id,di,f)=>setEmps(l=>{cap(l);commit();return l.map(x=>x.id!==id?x:mg(x,{days:x.days.map((d,i)=>i===di?mg(d,{[f]:""}):d)}));});
@@ -298,6 +319,24 @@ function App(){
   const setEv=(di,f,v)=>setEff(l=>l.map((x,i)=>i===di?mg(x,{[f]:v}):x));
   const setP=(f,v)=>setParams(p=>mg(p,{[f]:["sepDecimal","tolEffOn","genEcraser","genFermetureComptoir"].includes(f)?v:(parseFloat(v)||0)}));
 
+  // ── Test ──
+  const loadTestData=()=>{setCin(TEST_CIN);setEff(TEST_EFF);setPage("dispo");};
+
+  // ── Import PDF ──
+  const handleImport=async file=>{
+    try{
+      const{newEmps,matched,skipped}=await parsePDF(file,emps,getDispo);
+      setEmps(newEmps);
+      setImportMsg(`✓ ${matched} employé${matched!==1?"s":""} importé${matched!==1?"s":""}${skipped>0?` · ${skipped} non trouvé${skipped!==1?"s":""}`:""}`);;
+      setTimeout(()=>setImportMsg(null),5000);
+      setPage("dispo");
+    } catch(err){
+      setImportMsg("Erreur : "+err.message);
+      setTimeout(()=>setImportMsg(null),5000);
+    }
+  };
+
+  // ── Navigation clavier ──
   const focusRef=k=>{if(refs.current[k])refs.current[k].focus();};
   const focusCinRef=k=>{if(cinRefs.current[k])cinRefs.current[k].focus();};
   const focusNext=(eid,di,f)=>{
@@ -327,107 +366,81 @@ function App(){
     if(e.key==="Enter"){e.preventDefault();blurCin(di,f,v);setTimeout(()=>focusCinRef(f==="ouverture"?ck(di,"fermeture"):di<6?ck(di+1,"ouverture"):null),0);return;}
     if((e.key==="Delete"||e.key==="Backspace")&&v){e.preventDefault();delCin(di,f);}
   };
+
+  // ── Collers ──
   const onPaste=(e,eid,di)=>{
-    const text=e.clipboardData.getData("text");
-    if(!text.includes("\t")&&!text.includes("\n"))return;
-    e.preventDefault();
-    const rows=text.trimEnd().split("\n").map(r=>r.split("\t"));
-    const filtered=filterEmpty(rows);
-    const startEi=emps.findIndex(x=>x.id===eid);
-    const interleaved=filtered[0].length>=(7-di)*2;
+    const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
+    const rows=text.trimEnd().split("\n").map(r=>r.split("\t"));const filtered=filterEmpty(rows);
+    const startEi=emps.findIndex(x=>x.id===eid);const interleaved=filtered[0].length>=(7-di)*2;
     setEmps(l=>{cap(l);const next=l.map((x,ei)=>{const ri=ei-startEi;if(ri<0)return x;let dRow,fRow;if(interleaved){if(ri>=filtered.length)return x;dRow=fRow=filtered[ri];}else{const b=ri*2;if(b>=filtered.length)return x;dRow=filtered[b];fRow=filtered[b+1]||[];}const newDays=x.days.map((day,dj)=>{if(dj<di)return day;const c=dj-di;const dv=interleaved?(dRow[c*2]!==undefined?normT(dRow[c*2].trim()):""):(dRow[c]!==undefined?normT(dRow[c].trim()):"");const fv=interleaved?(dRow[c*2+1]!==undefined?normT(dRow[c*2+1].trim()):""):(fRow[c]!==undefined?normT(fRow[c].trim()):"");return{debut:dv!==undefined?dv:day.debut,fin:fv!==undefined?fv:day.fin};});return mg(x,{days:newDays});});commit();return next;});
   };
   const onPasteDispo=(e,eid,di)=>{
-    const text=e.clipboardData.getData("text");
-    if(!text.includes("\t")&&!text.includes("\n"))return;
-    e.preventDefault();
-    const rows=text.trimEnd().split("\n").map(r=>r.split("\t"));
-    const filtered=filterEmpty(rows);
-    const startEi=emps.findIndex(x=>x.id===eid);
-    const interleaved=filtered[0].length>=(7-di)*2;
+    const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
+    const rows=text.trimEnd().split("\n").map(r=>r.split("\t"));const filtered=filterEmpty(rows);
+    const startEi=emps.findIndex(x=>x.id===eid);const interleaved=filtered[0].length>=(7-di)*2;
     setEmps(l=>l.map((x,ei)=>{const ri=ei-startEi;if(ri<0)return x;let dRow,fRow;if(interleaved){if(ri>=filtered.length)return x;dRow=fRow=filtered[ri];}else{const b=ri*2;if(b>=filtered.length)return x;dRow=filtered[b];fRow=filtered[b+1]||[];}const newDispo=getDispo(x).map((d,dj)=>{if(dj<di)return d;const c=dj-di;const dv=interleaved?(dRow[c*2]!==undefined?normT(dRow[c*2].trim()):""):(dRow[c]!==undefined?normT(dRow[c].trim()):"");const fv=interleaved?(dRow[c*2+1]!==undefined?normT(dRow[c*2+1].trim()):""):(fRow[c]!==undefined?normT(fRow[c].trim()):"");return{debut:dv!==undefined?dv:d.debut,fin:fv!==undefined?fv:d.fin};});return mg(x,{dispo:newDispo});}));
   };
   const onPasteCin=(e,di)=>{
-    const text=e.clipboardData.getData("text");
-    if(!text.includes("\t")&&!text.includes("\n"))return;
-    e.preventDefault();
+    const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
     const filtered=filterEmpty(text.trimEnd().split("\n").map(r=>r.split("\t")));
-    const oRow=filtered[0]||[],fRow=filtered[1]||[];
-    capCin(cin);
-    setCin(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;const ov=oRow[c]!==undefined?normT(oRow[c].trim()):"";const fv=fRow[c]!==undefined?normT(fRow[c].trim()):"";return mg(x,{ouverture:ov||x.ouverture,fermeture:fv||x.fermeture});}));
-    commitCin();
+    const oRow=filtered[0]||[],fRow=filtered[1]||[];capCin(cin);
+    setCin(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;const ov=oRow[c]!==undefined?normT(oRow[c].trim()):"";const fv=fRow[c]!==undefined?normT(fRow[c].trim()):"";return mg(x,{ouverture:ov||x.ouverture,fermeture:fv||x.fermeture});}));commitCin();
   };
   const onPasteEff=(e,di)=>{
-    const text=e.clipboardData.getData("text");
-    if(!text.includes("\t")&&!text.includes("\n"))return;
-    e.preventDefault();
+    const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
     const filtered=filterEmpty(text.trimEnd().split("\n").map(r=>r.split("\t")));
-    const interleaved=filtered[0].length>=(7-di)*2;
-    const jRow=filtered[0]||[],sRow=filtered[1]||[];
+    const interleaved=filtered[0].length>=(7-di)*2;const jRow=filtered[0]||[],sRow=filtered[1]||[];
     setEff(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;const jv=interleaved?(jRow[c*2]!==undefined?jRow[c*2].trim():""):(jRow[c]!==undefined?jRow[c].trim():"");const sv=interleaved?(jRow[c*2+1]!==undefined?jRow[c*2+1].trim():""):(sRow[c]!==undefined?sRow[c].trim():"");return mg(x,{jour:jv!==undefined?jv:x.jour,soir:sv!==undefined?sv:x.soir});}));
   };
 
-  // ── Génération : helper commun ──
+  // ── Génération ──
   const buildCandidats=(newDays,di,ouvH,ferH,finCible)=>{
     const cands=[];
     for(let ei=0;ei<emps.length;ei++){
       const emp=emps[ei];
       if(emp.particularite==="Vacances"||emp.particularite==="Sans solde")continue;
       if(!params.genEcraser&&newDays[ei][di].debut&&newDays[ei][di].fin)continue;
-      const d=getDispo(emp);
-      const dH=d[di].debut?toH(d[di].debut):null,fH=d[di].fin?toH(d[di].fin):null;
+      const d=getDispo(emp);const dH=d[di].debut?toH(d[di].debut):null,fH=d[di].fin?toH(d[di].fin):null;
       if(dH===null&&fH===null)continue;
       const empDebut=dH!==null?dH:ouvH,empFin=fH!==null?fH:ferH;
       if(empFin<finCible-EPS)continue;
       const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
       const ma=getMaxH(emp);if(wt>=ma)continue;
-      const canFerCin=empFin>=ferH-EPS?1:0,canOuv=empDebut<=ouvH+EPS?1:0;
+      const canFerCin=empFin>=ferH-EPS?1:0,canOuv=empDebut<=params.genSeuilOuverture+EPS?1:0;
       cands.push([ei,empFin-empDebut,wt,ma,empFin,canFerCin,canOuv,empDebut]);
     }
     cands.sort((a,b)=>(a[0]-b[0])||(b[5]-a[5])||(b[6]-a[6])||(b[4]-a[4]));
     return cands;
   };
 
-  const genererGroupe=(key)=>{
-    const newDays=emps.map(e=>e.days.map(d=>({...d})));
-    let assigns=0;
+  const genererGroupe=key=>{
+    const newDays=emps.map(e=>e.days.map(d=>({...d})));let assigns=0;
     for(let di=0;di<7;di++){
       const ch=cin[di];if(!ch.ouverture||!ch.fermeture)continue;
       const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture),ferEff=toH(getFerEff(ch.fermeture));
       const debutCible=key.startsWith("ouv")?ouvH:parseFloat(key.split("-")[0]);
       const finKey=key.split("-").slice(1).join("-");
       const finCible=finKey==="ferH"?ferH:finKey==="ferEff"?ferEff:parseFloat(finKey);
-
       let fermeturesCinema=newDays.filter((_,ei)=>{const f=toH(newDays[ei][di].fin);return f!==null&&f>=ferH-EPS;}).length;
       let ouvertureCount=newDays.filter((_,ei)=>{const d=toH(newDays[ei][di].debut);return d!==null&&d<=ouvH+EPS;}).length;
       const assignedToday=new Set(newDays.map((_,ei)=>newDays[ei][di].debut&&newDays[ei][di].fin?ei:-1).filter(x=>x>=0));
-
       if(finCible>=ferH-EPS&&fermeturesCinema>=params.genNbFermetureCinema)continue;
-
       const startsAtOuv=Math.abs(debutCible-ouvH)<EPS;
       const candidats=buildCandidats(newDays,di,ouvH,ferH,finCible)
         .filter(([ei])=>!assignedToday.has(ei))
-        .filter(([ei])=>{
-          if(finCible<ferH-EPS)return true;
-          const d=getDispo(emps[ei]);
-          return d[di].fin&&toH(d[di].fin)>=ferH-EPS;
-        });
-
+        .filter(([ei])=>{if(finCible<ferH-EPS)return true;const d=getDispo(emps[ei]);return d[di].fin&&toH(d[di].fin)>=ferH-EPS;});
       let assignesCeJour=0;
       for(const[ei,,wt,ma,,,,empDebut]of candidats){
         if(finCible>=ferH-EPS&&assignesCeJour>=params.genNbFermetureCinema)break;
-        const empDispoTot=empDebut<=ouvH+EPS;
+        const empDispoTot=empDebut<=params.genSeuilOuverture+EPS;
         const debutMin=startsAtOuv&&empDispoTot&&ouvertureCount>=params.genNbOuverture?ouvH+params.genDelaiApresOuverture:ouvH;
         const debutReel=startsAtOuv?Math.max(empDebut,debutMin):debutCible;
         if(startsAtOuv&&empDispoTot&&debutReel<=ouvH+EPS&&ouvertureCount>=params.genNbOuverture)continue;
         const debut=toStr(debutReel);
         const fin=(finCible>ferEff+EPS&&fermeturesCinema>=params.genNbFermetureCinema)?toStr(ferEff):toStr(finCible);
-        const h=calcH(debut,fin);
-        if(h<params.genMinQuart||wt+h>ma)continue;
-        newDays[ei][di]={debut,fin};
-        assignedToday.add(ei);
-        if(toH(fin)>=ferH-EPS)fermeturesCinema++;
-        if(debutReel<=ouvH+EPS)ouvertureCount++;
+        const h=calcH(debut,fin);if(h<params.genMinQuart||wt+h>ma)continue;
+        newDays[ei][di]={debut,fin};assignedToday.add(ei);
+        if(toH(fin)>=ferH-EPS)fermeturesCinema++;if(debutReel<=ouvH+EPS)ouvertureCount++;
         assigns++;assignesCeJour++;
       }
     }
@@ -437,9 +450,7 @@ function App(){
   };
 
   const genererHoraire=()=>{
-    const phase=genPhase;
-    const newDays=emps.map(e=>e.days.map(d=>({...d})));
-    let assigns=0;
+    const phase=genPhase;const newDays=emps.map(e=>e.days.map(d=>({...d})));let assigns=0;
     for(let di=0;di<7;di++){
       const ch=cin[di];if(!ch.ouverture||!ch.fermeture)continue;
       const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture),ferEff=toH(getFerEff(ch.fermeture));
@@ -460,21 +471,15 @@ function App(){
         const{jour,soir}=calcEffLocal();
         return(jourTarget===0||jour>=jourTarget)&&(soirTarget===0||soir>=soirTarget);
       };
-      const assignedToday=new Set();
-      let fermeturesCinema=0,ouvertureCount=0;
-
-      const candFer=buildCandidats(newDays,di,ouvH,ferH,ferH).filter(([ei])=>{
-        const d=getDispo(emps[ei]);return d[di].fin&&toH(d[di].fin)>=ferH-EPS;
-      });
+      const assignedToday=new Set();let fermeturesCinema=0,ouvertureCount=0;
+      const candFer=buildCandidats(newDays,di,ouvH,ferH,ferH).filter(([ei])=>{const d=getDispo(emps[ei]);return d[di].fin&&toH(d[di].fin)>=ferH-EPS;});
       for(const[ei,,wt,ma,,,,empDebut]of candFer){
         const debutReel=Math.max(empDebut,ouvH);
         const fin=fermeturesCinema<params.genNbFermetureCinema?toStr(ferH):toStr(ferEff);
         const debut=toStr(debutReel),h=calcH(debut,fin);
         if(h<params.genMinQuart||wt+h>ma)continue;
         newDays[ei][di]={debut,fin};assignedToday.add(ei);
-        if(toH(fin)>=ferH-EPS)fermeturesCinema++;
-        if(debutReel<=ouvH+EPS)ouvertureCount++;
-        assigns++;
+        if(toH(fin)>=ferH-EPS)fermeturesCinema++;if(debutReel<=ouvH+EPS)ouvertureCount++;assigns++;
       }
       const groupesDuJour=PHASES[phase].groupes(ouvH,ferH,ferEff);
       for(const[debutCible,finCible]of groupesDuJour){
@@ -483,18 +488,15 @@ function App(){
         const candidats=buildCandidats(newDays,di,ouvH,ferH,finCible).filter(([ei])=>!assignedToday.has(ei));
         for(const[ei,,wt,ma,,,,empDebut]of candidats){
           if(effAtteints())break;
-          const empDispoTot=empDebut<=ouvH+EPS;
+          const empDispoTot=empDebut<=params.genSeuilOuverture+EPS;
           const debutMin=startsAtOuv&&empDispoTot&&ouvertureCount>=params.genNbOuverture?ouvH+params.genDelaiApresOuverture:ouvH;
           const debutReel=startsAtOuv?Math.max(empDebut,debutMin):debutCible;
           if(startsAtOuv&&empDispoTot&&debutReel<=ouvH+EPS&&ouvertureCount>=params.genNbOuverture)continue;
           const debut=toStr(debutReel);
           const fin=(finCible>ferEff+EPS&&fermeturesCinema>=params.genNbFermetureCinema)?toStr(ferEff):toStr(finCible);
-          const h=calcH(debut,fin);
-          if(h<params.genMinQuart||wt+h>ma)continue;
+          const h=calcH(debut,fin);if(h<params.genMinQuart||wt+h>ma)continue;
           newDays[ei][di]={debut,fin};assignedToday.add(ei);
-          if(toH(fin)>=ferH-EPS)fermeturesCinema++;
-          if(debutReel<=ouvH+EPS)ouvertureCount++;
-          assigns++;
+          if(toH(fin)>=ferH-EPS)fermeturesCinema++;if(debutReel<=ouvH+EPS)ouvertureCount++;assigns++;
         }
       }
     }
@@ -504,13 +506,13 @@ function App(){
     setTimeout(()=>setGenMsg(null),4000);setPage("horaire");
   };
 
+  // ── En-tête sticky ──
   const StickyHeader=()=>(
     <div style={{position:"sticky",top:0,zIndex:20,background:"#fff",boxShadow:"0 2px 6px rgba(0,0,0,.12)"}}>
       <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/>
         <tbody>
           <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
-            <td style={{padding:"5px 8px 5px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>HEURES D'OUVERTURE</td>
-            <td/>
+            <td style={{padding:"5px 8px 5px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>HEURES D'OUVERTURE</td><td/>
             {cin.map((ch,di)=>{const kO=ck(di,"ouverture"),kF=ck(di,"fermeture");return(
               <td key={di} style={mg({padding:0,textAlign:"center",verticalAlign:"middle"},bl(di))}>
                 <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3}}>
@@ -522,39 +524,31 @@ function App(){
             <td/><td/>
           </tr>
           <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
-            <td style={{padding:"5px 8px 5px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>EFFECTIFS</td>
-            <td/>
+            <td style={{padding:"5px 8px 5px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>EFFECTIFS</td><td/>
             {eff.map((ef,di)=>{
               const{jour:cj,soir:cs}=calcEff(di);
               const mj=parseFloat((ef.jour||"").replace(",","."))||0,ms=parseFloat((ef.soir||"").replace(",","."))||0;
-              return(
-                <td key={di} style={mg({padding:0,textAlign:"center",verticalAlign:"middle"},bl(di))}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-                    {[{f:"jour",cv:cj,mn:mj},{f:"soir",cv:cs,mn:ms}].map(({f,cv,mn},fi)=>{
-                      const exact=mn>0&&eqEff(cv,mn),close=!exact&&mn>0&&params.tolEffOn&&params.tolEff>0&&Math.abs(cv-mn)<=params.tolEff&&cv>0,below=mn>0&&!exact&&!close&&cv<mn,above=mn>0&&!exact&&cv>mn;
-                      return(<span key={f} style={{display:"flex",alignItems:"center",gap:4}}>
-                        {fi>0&&<div style={{width:1,height:36,background:"#e2e8f0"}}/>}
-                        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                          <span style={{fontSize:9,fontWeight:600,color:"#94a3b8",letterSpacing:"0.4px"}}>{f.toUpperCase()}</span>
-                          <input type="text" value={ef[f]} onChange={e=>setEv(di,f,e.target.value)} maxLength={5} autoComplete="off" style={effS(exact,close,below,above)} placeholder="—" onPaste={e=>onPasteEff(e,di)}/>
-                          <span style={{fontSize:9,fontWeight:700,color:mn===0?"#94a3b8":cv>=mn?"#16a34a":"#dc2626"}}>{cv>0?cv.toString().replace(".",sep):"—"}</span>
-                        </div>
-                      </span>);
-                    })}
-                  </div>
-                </td>);
-            })}
+              return(<td key={di} style={mg({padding:0,textAlign:"center",verticalAlign:"middle"},bl(di))}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                  {[{f:"jour",cv:cj,mn:mj},{f:"soir",cv:cs,mn:ms}].map(({f,cv,mn},fi)=>{
+                    const exact=mn>0&&eqEff(cv,mn),close=!exact&&mn>0&&params.tolEffOn&&params.tolEff>0&&Math.abs(cv-mn)<=params.tolEff&&cv>0,below=mn>0&&!exact&&!close&&cv<mn,above=mn>0&&!exact&&cv>mn;
+                    return(<span key={f} style={{display:"flex",alignItems:"center",gap:4}}>
+                      {fi>0&&<div style={{width:1,height:36,background:"#e2e8f0"}}/>}
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                        <span style={{fontSize:9,fontWeight:600,color:"#94a3b8",letterSpacing:"0.4px"}}>{f.toUpperCase()}</span>
+                        <input type="text" value={ef[f]} onChange={e=>setEv(di,f,e.target.value)} maxLength={5} autoComplete="off" style={effS(exact,close,below,above)} placeholder="—" onPaste={e=>onPasteEff(e,di)}/>
+                        <span style={{fontSize:9,fontWeight:700,color:mn===0?"#94a3b8":cv>=mn?"#16a34a":"#dc2626"}}>{cv>0?cv.toString().replace(".",sep):"—"}</span>
+                      </div>
+                    </span>);
+                  })}
+                </div>
+              </td>);})}
             <td/><td/>
           </tr>
           <tr style={{borderBottom:"2px solid #c8cdd8",background:"#f8fafc",height:26}}>
             <td style={TH({textAlign:"left",paddingLeft:18})}>{page==="dispo"?"DISPONIBILITÉS":"ÉQUIPIER"}</td>
             <td style={TH({borderLeft:"1px solid #c8cdd8"})}>PARTICULARITÉ</td>
-            {DS.map((d,i)=>(
-              <td key={d} style={TH({borderLeft:"1px solid #c8cdd8",borderRight:i===6?"1px solid #c8cdd8":undefined})}>
-                <div style={{color:"#475569"}}>{d}</div>
-                <div style={{fontWeight:500,fontSize:10,color:"#64748b",marginTop:1}}>{fmt(wd[i],true)}</div>
-              </td>
-            ))}
+            {DS.map((d,i)=>(<td key={d} style={TH({borderLeft:"1px solid #c8cdd8",borderRight:i===6?"1px solid #c8cdd8":undefined})}><div style={{color:"#475569"}}>{d}</div><div style={{fontWeight:500,fontSize:10,color:"#64748b",marginTop:1}}>{fmt(wd[i],true)}</div></td>))}
             <td style={TH({color:"#0f172a"})}>TOTAL</td><td style={TH()}/>
           </tr>
         </tbody>
@@ -564,22 +558,9 @@ function App(){
 
   const TotalCell=({row})=>{
     const tot=totW(row),maxH=row.particularite==="Max heures"&&row.maxH?parseFloat(row.maxH):null,tc=totColor(tot,maxH);
-    return(
-      <td style={{textAlign:"center",verticalAlign:"middle",padding:"10px 8px"}}>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,minHeight:36}}>
-          <span style={{fontSize:14,fontWeight:800,visibility:tot>0?"visible":"hidden",color:tc}}>{fmtH(tot)||"0"}</span>
-          <div style={{width:36,height:3,borderRadius:2,background:"#d1d5db",overflow:"hidden"}}>
-            <div style={{width:Math.min(100,(tot/(maxH||40))*100)+"%",height:"100%",background:tc,borderRadius:2}}/>
-          </div>
-        </div>
-      </td>
-    );
+    return(<td style={{textAlign:"center",verticalAlign:"middle",padding:"10px 8px"}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,minHeight:36}}><span style={{fontSize:14,fontWeight:800,visibility:tot>0?"visible":"hidden",color:tc}}>{fmtH(tot)||"0"}</span><div style={{width:36,height:3,borderRadius:2,background:"#d1d5db",overflow:"hidden"}}><div style={{width:Math.min(100,(tot/(maxH||40))*100)+"%",height:"100%",background:tc,borderRadius:2}}/></div></div></td>);
   };
-  const DeleteCell=({id})=>(
-    <td style={{textAlign:"center",verticalAlign:"middle",padding:"0 6px"}}>
-      <button onClick={()=>remEmp(id)} style={{background:"none",border:"none",cursor:"pointer",color:"#c8cdd8",fontSize:14,padding:4}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#c8cdd8"}>×</button>
-    </td>
-  );
+  const DeleteCell=({id})=>(<td style={{textAlign:"center",verticalAlign:"middle",padding:"0 6px"}}><button onClick={()=>remEmp(id)} style={{background:"none",border:"none",cursor:"pointer",color:"#c8cdd8",fontSize:14,padding:4}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#c8cdd8"}>×</button></td>);
 
   const btnS={background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:0,cursor:"pointer",color:"#334155"};
   const tabS=a=>({background:a?"#1e293b":"#fff",color:a?"#fff":"#64748b",border:"1.5px solid #e2e8f0",borderRadius:0,padding:"6px 14px",cursor:"pointer",fontSize:12,fontWeight:600});
@@ -587,7 +568,6 @@ function App(){
   return(
     <div style={{fontFamily:"'Inter','Segoe UI',sans-serif",background:"#5a6080",minHeight:"100vh",padding:"24px 12px"}}>
       {page==="horaire"&&<GenPanel onGen={genererGroupe}/>}
-      {page==="dispo"&&<FloatingPanel dispoFilter={dispoFilter} setDispoFilter={setDispoFilter}/>}
       <div style={{margin:"0 auto",maxWidth:TW}}>
         <div style={{display:"flex",alignItems:"stretch",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",flex:1}}>
@@ -609,11 +589,15 @@ function App(){
             <button onClick={undo} style={{...btnS,padding:"4px 10px",fontSize:14}}>↩</button>
             <button onClick={redo} style={{...btnS,padding:"4px 10px",fontSize:14}}>↪</button>
             {genMsg&&<div style={{display:"flex",alignItems:"center",padding:"0 10px",background:"#dcfce7",border:"1.5px solid #16a34a",fontSize:11,fontWeight:600,color:"#15803d",maxWidth:240}}>{genMsg}</div>}
+            {importMsg&&<div style={{display:"flex",alignItems:"center",padding:"0 10px",background:"#dbeafe",border:"1.5px solid #3b82f6",fontSize:11,fontWeight:600,color:"#1d4ed8",maxWidth:260}}>{importMsg}</div>}
             <div style={{display:"flex",overflow:"hidden",border:"1.5px solid #e2e8f0"}}>
               <button onClick={()=>setPage("horaire")} style={tabS(page==="horaire")}>📅 Horaire</button>
               <button onClick={()=>setPage("dispo")} style={tabS(page==="dispo")}>📋 Dispos</button>
               <button onClick={()=>setPage("params")} style={tabS(page==="params")}>⚙️ Params</button>
             </div>
+            <button onClick={loadTestData} style={{...btnS,padding:"0 12px",fontSize:11,fontWeight:600}}>🧪 Test</button>
+            <input ref={importRef} type="file" accept=".pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])handleImport(e.target.files[0]);e.target.value="";}}/>
+            <button onClick={()=>importRef.current.click()} style={{...btnS,padding:"0 12px",fontSize:11,fontWeight:600}}>📥 Importer</button>
             {(page==="horaire"||page==="dispo")&&(
               <button onClick={genererHoraire} style={{background:"#16a34a",border:"none",padding:"0 16px",cursor:"pointer",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,minWidth:110}}>
                 <span style={{fontSize:12,fontWeight:700}}>⚡ Générer</span>
@@ -627,10 +611,7 @@ function App(){
           <div style={{background:"#fff",boxShadow:"0 1px 6px rgba(0,0,0,.1)",padding:"32px"}}>
             <h2 style={{margin:"0 0 24px",fontSize:16,fontWeight:800,color:"#0f172a"}}>⚙️ Paramètres</h2>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:32}}>
-              {[
-                {title:"Formule JOUR",bg:"#dbeafe",ps:[{label:"Décalage après ouverture",k:"jourDecalage",u:"h"},{label:"Heure limite journée",k:"jourLimite",u:"h"},{label:"Pondération intermédiaire",k:"jourPoids",u:"×"}]},
-                {title:"Formule SOIR",bg:"#fff3e0",ps:[{label:"Début tranche soir basse",k:"soirDebut",u:"h"},{label:"Fin tranche soir basse",k:"soirLimite",u:"h"},{label:"Pondération intermédiaire",k:"soirPoids",u:"×"}]},
-              ].map(({title,bg,ps})=>(
+              {[{title:"Formule JOUR",bg:"#dbeafe",ps:[{label:"Décalage après ouverture",k:"jourDecalage",u:"h"},{label:"Heure limite journée",k:"jourLimite",u:"h"},{label:"Pondération intermédiaire",k:"jourPoids",u:"×"}]},{title:"Formule SOIR",bg:"#fff3e0",ps:[{label:"Début tranche soir basse",k:"soirDebut",u:"h"},{label:"Fin tranche soir basse",k:"soirLimite",u:"h"},{label:"Pondération intermédiaire",k:"soirPoids",u:"×"}]}].map(({title,bg,ps})=>(
                 <div key={title} style={{background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:bg}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>{title}</h3></div>
                   {ps.map(({label,k,u})=><ParamRow key={k} label={label} value={params[k]} onChange={v=>setP(k,v)} unit={u}/>)}
@@ -642,6 +623,7 @@ function App(){
               <ParamRow label="Durée minimum d'un quart" value={params.genMinQuart} onChange={v=>setP("genMinQuart",v)} unit="h" step="0.5"/>
               <ParamRow label="Nb équipiers à l'ouverture" value={params.genNbOuverture} onChange={v=>setP("genNbOuverture",v)} unit="pers" step="1"/>
               <ParamRow label="Délai après quota ouverture" value={params.genDelaiApresOuverture} onChange={v=>setP("genDelaiApresOuverture",v)} unit="h" step="0.25"/>
+              <ParamRow label="Seuil dispo ouverture (≤)" value={params.genSeuilOuverture} onChange={v=>setP("genSeuilOuverture",v)} unit="h" step="0.5"/>
               <ParamRow label="Nb fermetures cinéma" value={params.genNbFermetureCinema} onChange={v=>setP("genNbFermetureCinema",v)} unit="pers" step="1"/>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                 <span style={{fontSize:12,color:"#475569"}}>Écraser les quarts existants</span>
@@ -651,30 +633,16 @@ function App(){
                 <div style={{fontSize:12,color:"#475569",fontWeight:500}}>Fermeture comptoir</div>
                 <div style={{display:"flex",gap:8}}><ToggleBtn val={true} cur={params.genFermetureComptoir} onClick={v=>setP("genFermetureComptoir",v)} label="Activé"/><ToggleBtn val={false} cur={params.genFermetureComptoir} onClick={v=>setP("genFermetureComptoir",v)} label="Désactivé"/></div>
               </div>
-              {params.genFermetureComptoir&&(
-                <div style={{background:"#fff",border:"1px solid #e2e8f0",padding:"16px",marginTop:4}}>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-                    <div><div style={{fontSize:11,fontWeight:700,color:"#94a3b8",marginBottom:10}}>RÈGLE 1 — SEUIL HAUT</div><ParamRow label="Si fermeture ≥" value={params.genSeuilHaut} onChange={v=>setP("genSeuilHaut",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirHaut} onChange={v=>setP("genComptoirHaut",v)} unit="h" step="0.5"/></div>
-                    <div><div style={{fontSize:11,fontWeight:700,color:"#94a3b8",marginBottom:10}}>RÈGLE 2 — SEUIL BAS</div><ParamRow label={`Si entre X et ${params.genSeuilHaut}h`} value={params.genSeuilBas} onChange={v=>setP("genSeuilBas",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirBas} onChange={v=>setP("genComptoirBas",v)} unit="h" step="0.5"/></div>
-                  </div>
-                  <div style={{marginTop:10,fontSize:11,color:"#94a3b8"}}>≥ {params.genSeuilHaut}h → {params.genComptoirHaut}h · entre {params.genSeuilBas}h et {params.genSeuilHaut}h → {params.genComptoirBas}h</div>
-                </div>
-              )}
+              {params.genFermetureComptoir&&(<div style={{background:"#fff",border:"1px solid #e2e8f0",padding:"16px",marginTop:4}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div><div style={{fontSize:11,fontWeight:700,color:"#94a3b8",marginBottom:10}}>RÈGLE 1 — SEUIL HAUT</div><ParamRow label="Si fermeture ≥" value={params.genSeuilHaut} onChange={v=>setP("genSeuilHaut",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirHaut} onChange={v=>setP("genComptoirHaut",v)} unit="h" step="0.5"/></div><div><div style={{fontSize:11,fontWeight:700,color:"#94a3b8",marginBottom:10}}>RÈGLE 2 — SEUIL BAS</div><ParamRow label={`Si entre X et ${params.genSeuilHaut}h`} value={params.genSeuilBas} onChange={v=>setP("genSeuilBas",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirBas} onChange={v=>setP("genComptoirBas",v)} unit="h" step="0.5"/></div></div><div style={{marginTop:10,fontSize:11,color:"#94a3b8"}}>≥ {params.genSeuilHaut}h → {params.genComptoirHaut}h · entre {params.genSeuilBas}h et {params.genSeuilHaut}h → {params.genComptoirBas}h</div></div>)}
             </div>
             <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:"#dcfce7"}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>TOLÉRANCE EFFECTIFS</h3></div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:params.tolEffOn?16:0}}>
-                <span style={{fontSize:12,color:"#475569"}}>Vert pâle si proche de la cible</span>
-                <div style={{display:"flex",gap:8}}><ToggleBtn val={true} cur={params.tolEffOn} onClick={v=>setP("tolEffOn",v)} label="Activé"/><ToggleBtn val={false} cur={params.tolEffOn} onClick={v=>setP("tolEffOn",v)} label="Désactivé"/></div>
-              </div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:params.tolEffOn?16:0}}><span style={{fontSize:12,color:"#475569"}}>Vert pâle si proche de la cible</span><div style={{display:"flex",gap:8}}><ToggleBtn val={true} cur={params.tolEffOn} onClick={v=>setP("tolEffOn",v)} label="Activé"/><ToggleBtn val={false} cur={params.tolEffOn} onClick={v=>setP("tolEffOn",v)} label="Désactivé"/></div></div>
               {params.tolEffOn&&<ParamRow label="Différence tolérée (±)" value={params.tolEff} onChange={v=>setP("tolEff",v)} unit="±" step="0.25"/>}
             </div>
             <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:"#e2e8f0"}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>FORMAT DES NOMBRES</h3></div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <span style={{fontSize:12,color:"#475569"}}>Séparateur décimal</span>
-                <div style={{display:"flex",gap:8}}><ToggleBtn val="," cur={sep} onClick={v=>setP("sepDecimal",v)} label="Virgule  1,5"/><ToggleBtn val="." cur={sep} onClick={v=>setP("sepDecimal",v)} label="Point  1.5"/></div>
-              </div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><span style={{fontSize:12,color:"#475569"}}>Séparateur décimal</span><div style={{display:"flex",gap:8}}><ToggleBtn val="," cur={sep} onClick={v=>setP("sepDecimal",v)} label="Virgule  1,5"/><ToggleBtn val="." cur={sep} onClick={v=>setP("sepDecimal",v)} label="Point  1.5"/></div></div>
             </div>
             <div style={{marginTop:24,display:"flex",justifyContent:"flex-end",gap:8}}>
               <button onClick={()=>setParams(DEF_P)} style={{background:"none",border:"1.5px solid #e2e8f0",padding:"8px 18px",cursor:"pointer",fontSize:13,color:"#64748b",borderRadius:0}}>Réinitialiser</button>
@@ -692,42 +660,30 @@ function App(){
                   const dispo=getDispo(row),blk=row.particularite==="Vacances"||row.particularite==="Sans solde";
                   const tot=totW(row),maxH=row.particularite==="Max heures"&&row.maxH?parseFloat(row.maxH):null;
                   const tc=totColor(tot,maxH),bg=ri%2===0?"#f0f1f7":"#e0e1ed";
-                  return(
-                    <tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
-                      <td style={{padding:"4px 12px 4px 18px",verticalAlign:"middle"}}>
-                        <div style={{display:"flex",flexDirection:"column",gap:3}}><span style={{fontSize:13,fontWeight:600,color:"#1e293b"}}>{row.prenom}</span><span style={{fontSize:12,color:"#64748b"}}>{row.nom}</span></div>
-                      </td>
-                      <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}>
-                        <span style={{fontSize:11,color:"#64748b"}}>{row.particularite||"—"}</span>
-                      </td>
-                      {dispo.map((d,di)=>{
-                        const hasDispo=d.debut||d.fin,elig=dispoFilter!==null&&isEligibleViz(row,di,dispoFilter);
-                        return(
-                          <td key={di} style={mg({padding:"8px 6px",verticalAlign:"middle",textAlign:"center",background:elig?PASS_COLORS[dispoFilter]:"transparent"},bl(di))}>
-                            {blk?(<div style={{height:52,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:2,borderRadius:2,background:"#c8cdd8"}}/></div>):(
-                              <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
-                                <div style={{display:"flex",alignItems:"center",gap:4}}>
-                                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                                    <input type="text" value={d.debut} onChange={e=>updDispo(row.id,di,"debut",e.target.value)} onBlur={e=>blurDispo(row.id,di,"debut",e.target.value)} onPaste={e=>onPasteDispo(e,row.id,di)} maxLength={5} placeholder={cin[di].ouverture} style={tiS(!!d.debut,"#fff",false)}/>
-                                    <div style={{width:16,height:1,background:"#e2e8f0"}}/>
-                                    <input type="text" value={d.fin} onChange={e=>updDispo(row.id,di,"fin",e.target.value)} onBlur={e=>blurDispo(row.id,di,"fin",e.target.value)} onPaste={e=>onPasteDispo(e,row.id,di)} maxLength={5} placeholder={cin[di].fermeture} style={tiS(!!d.fin,"#fff",false)}/>
-                                  </div>
-                                  <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",whiteSpace:"nowrap",visibility:hasDispo?"visible":"hidden",minWidth:20}}>{fmtHs(calcH(d.debut||cin[di].ouverture,d.fin||cin[di].fermeture))}</span>
-                                </div>
+                  return(<tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
+                    <td style={{padding:"4px 12px 4px 18px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><span style={{fontSize:13,fontWeight:600,color:"#1e293b"}}>{row.prenom}</span><span style={{fontSize:12,color:"#64748b"}}>{row.nom}</span></div></td>
+                    <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}><span style={{fontSize:11,color:"#64748b"}}>{row.particularite||"—"}</span></td>
+                    {dispo.map((d,di)=>{const hasDispo=d.debut||d.fin;return(
+                      <td key={di} style={mg({padding:"8px 6px",verticalAlign:"middle",textAlign:"center"},bl(di))}>
+                        {blk?(<div style={{height:52,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:2,borderRadius:2,background:"#c8cdd8"}}/></div>):(
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:4}}>
+                              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                                <input type="text" value={d.debut} onChange={e=>updDispo(row.id,di,"debut",e.target.value)} onBlur={e=>blurDispo(row.id,di,"debut",e.target.value)} onPaste={e=>onPasteDispo(e,row.id,di)} maxLength={5} placeholder={cin[di].ouverture} style={tiS(!!d.debut,"#fff",false)}/>
+                                <div style={{width:16,height:1,background:"#e2e8f0"}}/>
+                                <input type="text" value={d.fin} onChange={e=>updDispo(row.id,di,"fin",e.target.value)} onBlur={e=>blurDispo(row.id,di,"fin",e.target.value)} onPaste={e=>onPasteDispo(e,row.id,di)} maxLength={5} placeholder={cin[di].fermeture} style={tiS(!!d.fin,"#fff",false)}/>
                               </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                      <TotalCell row={row}/><DeleteCell id={row.id}/>
-                    </tr>
-                  );
+                              <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",whiteSpace:"nowrap",visibility:hasDispo?"visible":"hidden",minWidth:20}}>{fmtHs(calcH(d.debut||cin[di].ouverture,d.fin||cin[di].fermeture))}</span>
+                            </div>
+                          </div>
+                        )}
+                      </td>);})}
+                    <TotalCell row={row}/><DeleteCell id={row.id}/>
+                  </tr>);
                 })}
               </tbody>
             </table>
-            <div style={{padding:"10px 18px",borderTop:"1px solid #d1d5db",background:"#f8fafc",fontSize:11,color:"#94a3b8"}}>
-              💡 Inscris les heures de disponibilité. Les cases vides sont considérées comme indisponibles.
-            </div>
+            <div style={{padding:"10px 18px",borderTop:"1px solid #d1d5db",background:"#f8fafc",fontSize:11,color:"#94a3b8"}}>💡 Inscris les heures de disponibilité. Les cases vides sont considérées comme indisponibles.</div>
           </div>
         </>)}
 
@@ -739,42 +695,31 @@ function App(){
                 {emps.map((row,ri)=>{
                   const blk=row.particularite==="Vacances"||row.particularite==="Sans solde";
                   const bg=ri%2===0?"#f0f1f7":"#e0e1ed";
-                  return(
-                    <tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
-                      <td style={{padding:"4px 12px 4px 18px",verticalAlign:"middle"}}>
-                        <div style={{display:"flex",flexDirection:"column",gap:3}}>
-                          <input placeholder="Prénom" value={row.prenom} onChange={e=>setEmp(row.id,"prenom",e.target.value)} style={niS()}/>
-                          <input placeholder="Nom" value={row.nom} onChange={e=>setEmp(row.id,"nom",e.target.value)} style={mg(niS(),{fontWeight:400,color:"#64748b",fontSize:12})}/>
-                        </div>
-                      </td>
-                      <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}>
-                        <PartCell row={row} onChange={(f,v)=>setEmp(row.id,f,v)}/>
-                      </td>
-                      {row.days.map((day,di)=>{
-                        const h=calcH(day.debut,day.fin),ch=cin[di];
-                        const mO=!!(day.debut&&ch.ouverture&&day.debut===ch.ouverture);
-                        const mC=!!(day.fin&&ch.fermeture&&day.fin===ch.fermeture);
-                        const kD=rk(row.id,di,"debut"),kF=rk(row.id,di,"fin");
-                        return(
-                          <td key={di} style={mg({padding:"8px 6px",verticalAlign:"middle",textAlign:"center"},bl(di))}>
-                            {blk?(<div style={{height:52,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:2,borderRadius:2,background:"#c8cdd8"}}/></div>):(
-                              <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
-                                <div style={{display:"flex",alignItems:"center",gap:4}}>
-                                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                                    <input type="text" value={day.debut} ref={el=>{refs.current[kD]=el;}} onChange={e=>updDay(row.id,di,"debut",e.target.value)} onBlur={e=>{blurDay(row.id,di,"debut",e.target.value);setFk(null);}} onFocus={()=>setFk(kD)} onClick={e=>e.target.select()} onKeyDown={e=>onKD(e,row.id,di,"debut")} onPaste={e=>onPaste(e,row.id,di)} maxLength={5} autoComplete="off" style={tiS(!!day.debut,mO?"#dbeafe":"#fff",fk===kD)}/>
-                                    <div style={{width:16,height:1,background:"#e2e8f0"}}/>
-                                    <input type="text" value={day.fin} ref={el=>{refs.current[kF]=el;}} onChange={e=>updDay(row.id,di,"fin",e.target.value)} onBlur={e=>{blurDay(row.id,di,"fin",e.target.value);setFk(null);}} onFocus={()=>setFk(kF)} onClick={e=>e.target.select()} onKeyDown={e=>onKD(e,row.id,di,"fin")} maxLength={5} autoComplete="off" style={tiS(!!day.fin,mC?"#fff3e0":"#fff",fk===kF)}/>
-                                  </div>
-                                  <span style={{fontSize:10,fontWeight:700,color:h>0&&h<4?"#fb7185":"#94a3b8",whiteSpace:"nowrap",visibility:h>0?"visible":"hidden",minWidth:20}}>{fmtHs(h)}</span>
-                                </div>
+                  return(<tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
+                    <td style={{padding:"4px 12px 4px 18px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><input placeholder="Prénom" value={row.prenom} onChange={e=>setEmp(row.id,"prenom",e.target.value)} style={niS()}/><input placeholder="Nom" value={row.nom} onChange={e=>setEmp(row.id,"nom",e.target.value)} style={mg(niS(),{fontWeight:400,color:"#64748b",fontSize:12})}/></div></td>
+                    <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}><PartCell row={row} onChange={(f,v)=>setEmp(row.id,f,v)}/></td>
+                    {row.days.map((day,di)=>{
+                      const h=calcH(day.debut,day.fin),ch=cin[di];
+                      const mO=!!(day.debut&&ch.ouverture&&day.debut===ch.ouverture);
+                      const mC=!!(day.fin&&ch.fermeture&&day.fin===ch.fermeture);
+                      const kD=rk(row.id,di,"debut"),kF=rk(row.id,di,"fin");
+                      return(<td key={di} style={mg({padding:"8px 6px",verticalAlign:"middle",textAlign:"center"},bl(di))}>
+                        {blk?(<div style={{height:52,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:2,borderRadius:2,background:"#c8cdd8"}}/></div>):(
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:4}}>
+                              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                                <input type="text" value={day.debut} ref={el=>{refs.current[kD]=el;}} onChange={e=>updDay(row.id,di,"debut",e.target.value)} onBlur={e=>{blurDay(row.id,di,"debut",e.target.value);setFk(null);}} onFocus={()=>setFk(kD)} onClick={e=>e.target.select()} onKeyDown={e=>onKD(e,row.id,di,"debut")} onPaste={e=>onPaste(e,row.id,di)} maxLength={5} autoComplete="off" style={tiS(!!day.debut,mO?"#dbeafe":"#fff",fk===kD)}/>
+                                <div style={{width:16,height:1,background:"#e2e8f0"}}/>
+                                <input type="text" value={day.fin} ref={el=>{refs.current[kF]=el;}} onChange={e=>updDay(row.id,di,"fin",e.target.value)} onBlur={e=>{blurDay(row.id,di,"fin",e.target.value);setFk(null);}} onFocus={()=>setFk(kF)} onClick={e=>e.target.select()} onKeyDown={e=>onKD(e,row.id,di,"fin")} maxLength={5} autoComplete="off" style={tiS(!!day.fin,mC?"#fff3e0":"#fff",fk===kF)}/>
                               </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                      <TotalCell row={row}/><DeleteCell id={row.id}/>
-                    </tr>
-                  );
+                              <span style={{fontSize:10,fontWeight:700,color:h>0&&h<4?"#fb7185":"#94a3b8",whiteSpace:"nowrap",visibility:h>0?"visible":"hidden",minWidth:20}}>{fmtHs(h)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </td>);
+                    })}
+                    <TotalCell row={row}/><DeleteCell id={row.id}/>
+                  </tr>);
                 })}
               </tbody>
               <tfoot>
