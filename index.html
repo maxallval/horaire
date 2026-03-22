@@ -22,40 +22,17 @@ select{-webkit-appearance:none;-moz-appearance:none;}
 <script type="text/babel">
 const {useState,useRef,useMemo,useCallback,useEffect}=React;
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const DAYS=["Vendredi","Samedi","Dimanche","Lundi","Mardi","Mercredi","Jeudi"];
 const DS=["VEN","SAM","DIM","LUN","MAR","MER","JEU"];
 const PARTS=[{value:"",label:"—"},{value:"Vacances",label:"Vacances"},{value:"Sans solde",label:"Sans solde"},{value:"Max heures",label:"Heures Max"},{value:"Personnalisé",label:"Personnalisé"}];
 const CE=140,CP=150,CD=128,CT=68,CX=32,TW=CE+CP+CD*7+CT+CX,EPS=0.02;
-const DEF_P={
-  jourDecalage:2,jourLimite:17,jourPoids:0.5,
-  soirDebut:18.1,soirLimite:20,soirPoids:0.5,
-  sepDecimal:",",tolEff:0,tolEffOn:false,
-  genMinQuart:4,genEcraser:false,genDelaiApresOuverture:0.5,
-  genSeuilOuverture:12,genNbOuverture:3,genNbFermetureCinema:1,
-  genFermetureComptoir:true,genSeuilHaut:24,genComptoirHaut:23,genSeuilBas:22,genComptoirBas:22,
-  genOuvertureFlexible:true,genMaxHeures:42
-};
+const DEF_P={jourDecalage:2,jourLimite:17,jourPoids:0.5,soirDebut:18.1,soirLimite:20,soirPoids:0.5,sepDecimal:",",tolEff:0,tolEffOn:false,genMinQuart:4,genEcraser:false,genDelaiApresOuverture:0.5,genSeuilOuverture:12,genNbOuverture:3,genNbFermetureCinema:1,genFermetureComptoir:true,genSeuilHaut:24,genComptoirHaut:23,genSeuilBas:22,genComptoirBas:22,genOuvertureFlexible:true,genMaxHeures:42};
 const BOOL_PARAMS=new Set(["sepDecimal","tolEffOn","genEcraser","genFermetureComptoir","genOuvertureFlexible"]);
 const SK={cin:"horaire:cin",eff:"horaire:eff",parts:"horaire:parts"};
 
-// ─── Storage helpers ──────────────────────────────────────────────────────────
-const stoSave=async(k,v)=>{
-  try{
-    if(!window.storage)return false;
-    await window.storage.set(k,JSON.stringify(v));
-    return true;
-  }catch(e){console.warn("stoSave",k,e);return false;}
-};
-const stoLoad=async k=>{
-  try{
-    if(!window.storage)return null;
-    const r=await window.storage.get(k);
-    return r?JSON.parse(r.value):null;
-  }catch(e){return null;}
-};
+const stoSave=async(k,v)=>{try{if(!window.storage)return false;await window.storage.set(k,JSON.stringify(v));return true;}catch(e){return false;}};
+const stoLoad=async k=>{try{if(!window.storage)return null;const r=await window.storage.get(k);return r?JSON.parse(r.value):null;}catch(e){return null;}};
 
-// ─── Utils ────────────────────────────────────────────────────────────────────
 const addD=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
 const fmt=(d,s=false)=>d.toLocaleDateString("fr-CA",s?{day:"2-digit",month:"short"}:{day:"numeric",month:"long"});
 const toH=t=>{if(!t)return null;const[h,m]=t.split(":").map(Number);return h+(m||0)/60;};
@@ -68,8 +45,7 @@ const mkDispo=()=>DAYS.map(()=>({debut:"",fin:""}));
 const isBlocked=p=>p==="Vacances"||p==="Sans solde";
 const totColor=(tot,maxH)=>maxH&&tot>maxH?"#dc2626":tot>42.5?"#dc2626":tot>40?"#ea580c":"#16a34a";
 const normT=v=>{
-  if(!v)return"";
-  const s=v.trim();
+  if(!v)return"";const s=v.trim();
   if(/^\d{1,2}[,.]\d+$/.test(s)){const[hP,dP]=s.replace(",",".").split(".");return`${String(parseInt(hP)).padStart(2,"0")}:${String(Math.round(parseFloat("0."+dP)*60)).padStart(2,"0")}`;}
   const r=s.replace("h",":");
   if(/^\d{3,4}$/.test(r))return`${r.slice(0,-2).padStart(2,"0")}:${r.slice(-2)}`;
@@ -81,7 +57,6 @@ const isoW=d=>{const r=new Date(d);r.setHours(0,0,0,0);r.setDate(r.getDate()+3-(
 const nextFri=()=>{const t=new Date(),f=new Date(t);f.setDate(t.getDate()+(5-t.getDay()+7)%7+7);f.setHours(0,0,0,0);return f;};
 const filterEmpty=rows=>{const keep=rows[0].reduce((a,_,ci)=>{if(rows.some(r=>r[ci]&&r[ci].trim()))a.push(ci);return a;},[]);return rows.map(r=>keep.map(ci=>r[ci]||""));};
 
-// ─── Static styles ────────────────────────────────────────────────────────────
 const selS={border:"none",fontSize:12,color:"#475569",background:"transparent",outline:"none",cursor:"pointer",appearance:"none",textAlign:"center",fontWeight:500,width:"100%"};
 const uSty={border:"none",borderBottom:"1px solid #94a3b8",padding:"1px 2px",fontSize:12,outline:"none",color:"#334155",background:"transparent"};
 const niS={display:"block",width:"100%",border:"none",padding:0,fontSize:13,fontWeight:600,color:"#1e293b",background:"transparent",outline:"none",boxSizing:"border-box",fontFamily:"'Inter','Segoe UI',sans-serif"};
@@ -92,7 +67,6 @@ const tiS=(f,bg,fc)=>({border:`1px ${fc?"dashed #0f172a":`solid ${f?"#a0a8b8":"#
 const cinS=(bg,fc)=>({border:`1px ${fc?"dashed #0f172a":"solid #c8cdd8"}`,borderRadius:5,padding:"2px 5px",fontSize:13,background:fc?"#e0f0e8":bg,outline:"none",width:72,textAlign:"center",color:"#0f172a",cursor:"text",fontWeight:400});
 const effS=(exact,close,below,above)=>({border:`1px solid ${exact?"#16a34a":close?"#86efac":below?"#fca5a5":above?"#fcd34d":"#e2e8f0"}`,borderRadius:5,padding:"2px",fontSize:12,fontWeight:600,background:exact?"#dcfce7":close?"#f0fdf4":below?"#fef2f2":above?"#fffbeb":"#f8fafc",outline:"none",width:42,textAlign:"center",color:exact?"#15803d":close?"#16a34a":below?"#dc2626":above?"#b45309":"#334155",cursor:"text"});
 
-// ─── Seed data ────────────────────────────────────────────────────────────────
 let uid=1;
 const mkE=()=>({id:uid++,prenom:"",nom:"",particularite:"",maxH:"",noteP:"",days:DAYS.map(()=>({debut:"",fin:""})),dispo:mkDispo()});
 const EMPS=[
@@ -109,20 +83,11 @@ const EMPS=[
   {...mkE(),prenom:"Ariane",nom:"Lévesque"},{...mkE(),prenom:"Antoine",nom:"Desfossés"},
   {...mkE(),prenom:"Étienne",nom:"Jourdain"},
 ];
-const TEST_CIN=[
-  {ouverture:"10:45",fermeture:"24:00"},{ouverture:"10:45",fermeture:"24:00"},
-  {ouverture:"11:30",fermeture:"22:15"},{ouverture:"12:00",fermeture:"22:15"},
-  {ouverture:"11:30",fermeture:"22:15"},{ouverture:"12:00",fermeture:"22:15"},
-  {ouverture:"12:00",fermeture:"22:15"},
-];
-const TEST_EFF=[
-  {jour:"3,5",soir:"3"},{jour:"7",soir:"4"},{jour:"6,5",soir:"4"},
-  {jour:"7",soir:"3"},{jour:"6,5",soir:"3"},{jour:"4",soir:"3"},{jour:"3",soir:"3"},
-];
+const TEST_CIN=[{ouverture:"10:45",fermeture:"24:00"},{ouverture:"10:45",fermeture:"24:00"},{ouverture:"11:30",fermeture:"22:15"},{ouverture:"12:00",fermeture:"22:15"},{ouverture:"11:30",fermeture:"22:15"},{ouverture:"12:00",fermeture:"22:15"},{ouverture:"12:00",fermeture:"22:15"}];
+const TEST_EFF=[{jour:"3,5",soir:"3"},{jour:"7",soir:"4"},{jour:"6,5",soir:"4"},{jour:"7",soir:"3"},{jour:"6,5",soir:"3"},{jour:"4",soir:"3"},{jour:"3",soir:"3"}];
 const DEF_CIN=DAYS.map(()=>({ouverture:"10:00",fermeture:"23:00"}));
 const DEF_EFF=DAYS.map(()=>({jour:"",soir:""}));
 
-// ─── Small components ─────────────────────────────────────────────────────────
 const Cols=()=>(<colgroup><col style={{width:CE}}/><col style={{width:CP}}/>{DAYS.map((_,i)=><col key={i} style={{width:CD}}/>)}<col style={{width:CT}}/><col style={{width:CX}}/></colgroup>);
 const Pill=({label,value,color})=>(<div style={{background:"#fff",border:"1.5px solid #e2e8f0",padding:"4px 12px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",alignSelf:"stretch"}}><div style={{fontSize:9,color:"#94a3b8",fontWeight:600,letterSpacing:"0.5px",textTransform:"uppercase"}}>{label}</div><div style={{fontSize:13,fontWeight:800,color,marginTop:1}}>{value}</div></div>);
 const ToggleBtn=({val,cur,onClick,label})=>{const on=cur===val;return(<button onClick={()=>onClick(val)} style={{padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:0,border:`1.5px solid ${on?"#1e293b":"#e2e8f0"}`,background:on?"#1e293b":"#fff",color:on?"#fff":"#475569"}}>{label}</button>);};
@@ -152,7 +117,6 @@ function ParamRow({label,value,onChange,unit,step}){
   return(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}><span style={{fontSize:12,color:"#475569",flex:1}}>{label}</span><div style={{display:"flex",alignItems:"center",gap:6}}><input type="number" value={value} onChange={e=>onChange(e.target.value)} step={step||"0.1"} style={{border:"1px solid #e2e8f0",padding:"4px 12px",fontSize:13,fontWeight:600,color:"#0f172a",width:100,outline:"none",borderRadius:0}}/><span style={{fontSize:11,color:"#94a3b8",minWidth:16}}>{unit}</span></div></div>);
 }
 
-// ─── PDF parser ───────────────────────────────────────────────────────────────
 async function parsePDF(file,emps,getDispo){
   const buf=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf}).promise;
@@ -191,7 +155,6 @@ async function parsePDF(file,emps,getDispo){
   return{newEmps,matched};
 }
 
-// ─── App ──────────────────────────────────────────────────────────────────────
 function App(){
   const[ws,setWs]=useState(nextFri);
   const[emps,setEmps]=useState(EMPS);
@@ -204,44 +167,28 @@ function App(){
   const[genMsg,setGenMsg]=useState(null);
   const[importMsg,setImportMsg]=useState(null);
   const[loaded,setLoaded]=useState(false);
-  const[savedOk,setSavedOk]=useState(null); // null=init, true=ok, false=erreur
+  const[savedOk,setSavedOk]=useState(null);
+  const[confirmHoraire,setConfirmHoraire]=useState(false);
+  const[confirmDispo,setConfirmDispo]=useState(false);
   const refs=useRef({});
   const cinRefs=useRef({});
   const importRef=useRef(null);
   const hist=useRef([]),fut=useRef([]),before=useRef(null);
   const cinHist=useRef([]),cinFut=useRef([]),cinBefore=useRef(null);
 
-  // ── Chargement initial ──
   useEffect(()=>{
     (async()=>{
-      const[savedCin,savedEff,savedParts]=await Promise.all([
-        stoLoad(SK.cin),stoLoad(SK.eff),stoLoad(SK.parts)
-      ]);
+      const[savedCin,savedEff,savedParts]=await Promise.all([stoLoad(SK.cin),stoLoad(SK.eff),stoLoad(SK.parts)]);
       if(savedCin&&savedCin.length===7)setCin(savedCin);
       if(savedEff&&savedEff.length===7)setEff(savedEff);
-      if(savedParts){
-        setEmps(l=>l.map(emp=>{
-          const p=savedParts[emp.id];
-          if(!p)return emp;
-          return{...emp,particularite:p.particularite||"",maxH:p.maxH||"",noteP:p.noteP||""};
-        }));
-      }
-      // Test rapide pour confirmer que le storage fonctionne
+      if(savedParts){setEmps(l=>l.map(emp=>{const p=savedParts[emp.id];if(!p)return emp;return{...emp,particularite:p.particularite||"",maxH:p.maxH||"",noteP:p.noteP||""};}));}
       const testOk=await stoSave("horaire:test","ok");
       setSavedOk(testOk);
       setLoaded(true);
     })();
   },[]);
-
-  // ── Sauvegarde automatique ──
-  useEffect(()=>{
-    if(!loaded)return;
-    stoSave(SK.cin,cin);
-  },[cin,loaded]);
-  useEffect(()=>{
-    if(!loaded)return;
-    stoSave(SK.eff,eff);
-  },[eff,loaded]);
+  useEffect(()=>{if(loaded)stoSave(SK.cin,cin);},[cin,loaded]);
+  useEffect(()=>{if(loaded)stoSave(SK.eff,eff);},[eff,loaded]);
   useEffect(()=>{
     if(!loaded)return;
     const parts={};
@@ -279,7 +226,6 @@ function App(){
     return ferStr;
   },[params.genFermetureComptoir,params.genSeuilHaut,params.genComptoirHaut,params.genSeuilBas,params.genComptoirBas]);
 
-  // ── Undo/redo ──
   const cap=l=>{if(before.current===null)before.current=JSON.stringify(l);};
   const commit=()=>{if(before.current!==null){hist.current.push(before.current);if(hist.current.length>50)hist.current.shift();fut.current=[];before.current=null;}};
   const undo=()=>{commit();if(!hist.current.length)return;setEmps(c=>{fut.current.push(JSON.stringify(c));return JSON.parse(hist.current.pop());});};
@@ -289,7 +235,6 @@ function App(){
   const undoCin=()=>{commitCin();if(!cinHist.current.length)return;setCin(c=>{cinFut.current.push(JSON.stringify(c));return JSON.parse(cinHist.current.pop());});};
   const redoCin=()=>{if(!cinFut.current.length)return;setCin(c=>{cinHist.current.push(JSON.stringify(c));return JSON.parse(cinFut.current.pop());});};
 
-  // ── Mutators ──
   const updDay=(id,di,f,v)=>setEmps(l=>{cap(l);return l.map(x=>x.id!==id?x:{...x,days:x.days.map((d,i)=>i===di?{...d,[f]:v}:d)});});
   const blurDay=(id,di,f,v)=>{commit();const n=normT(v);setEmps(l=>l.map(x=>x.id!==id?x:{...x,days:x.days.map((d,i)=>i===di?{...d,[f]:n}:d)}));};
   const delDay=(id,di,f)=>setEmps(l=>{cap(l);commit();return l.map(x=>x.id!==id?x:{...x,days:x.days.map((d,i)=>i===di?{...d,[f]:""}:d)});});
@@ -310,7 +255,17 @@ function App(){
     catch(err){setImportMsg("Erreur : "+err.message);setTimeout(()=>setImportMsg(null),5000);}
   };
 
-  // ── Keyboard ──
+  const effacerHoraire=()=>{
+    if(!confirmHoraire){setConfirmHoraire(true);setTimeout(()=>setConfirmHoraire(false),3000);return;}
+    cap(emps);setEmps(l=>l.map(e=>({...e,days:DAYS.map(()=>({debut:"",fin:""}))})));commit();
+    setConfirmHoraire(false);showMsg("Horaire effacé");
+  };
+  const effacerDispos=()=>{
+    if(!confirmDispo){setConfirmDispo(true);setTimeout(()=>setConfirmDispo(false),3000);return;}
+    setEmps(l=>l.map(e=>({...e,dispo:mkDispo()})));
+    setConfirmDispo(false);showMsg("Disponibilités effacées");
+  };
+
   const rk=(eid,di,f)=>`${eid}-${di}-${f}`;
   const ck=(di,f)=>`cin-${di}-${f}`;
   const focusRef=k=>{if(refs.current[k])refs.current[k].focus();};
@@ -343,33 +298,31 @@ function App(){
     if((e.key==="Delete"||e.key==="Backspace")&&v){e.preventDefault();delCin(di,f);}
   };
 
-  // ── Paste ──
-  const getCell=(row,c,interleaved,isF)=>{if(!row)return"";const val=interleaved?row[c*2+(isF?1:0)]:row[c];return val?val.trim():"";};
-  const splitPaste=(text,di)=>{const rows=text.trimEnd().split("\n").map(r=>r.split("\t"));const filtered=filterEmpty(rows);return{filtered,interleaved:filtered[0].length>=(7-di)*2};};
+  const getCell=(row,c,il,isF)=>{if(!row)return"";const val=il?row[c*2+(isF?1:0)]:row[c];return val?val.trim():"";};
+  const splitPaste=(text,di)=>{const rows=text.trimEnd().split("\n").map(r=>r.split("\t"));const f=filterEmpty(rows);return{filtered:f,interleaved:f[0].length>=(7-di)*2};};
   const onPaste=(e,eid,di)=>{
     const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
-    const{filtered,interleaved}=splitPaste(text,di);const startEi=empIdx[eid];
-    setEmps(l=>{cap(l);const next=l.map((x,ei)=>{const ri=ei-startEi;if(ri<0)return x;let dRow,fRow;if(interleaved){if(ri>=filtered.length)return x;dRow=fRow=filtered[ri];}else{const b=ri*2;if(b>=filtered.length)return x;dRow=filtered[b];fRow=filtered[b+1]||[];}const newDays=x.days.map((day,dj)=>{if(dj<di)return day;const c=dj-di;return{debut:normT(getCell(dRow,c,interleaved,false))||day.debut,fin:normT(getCell(interleaved?dRow:fRow,c,interleaved,true))||day.fin};});return{...x,days:newDays};});commit();return next;});
+    const{filtered:f,interleaved:il}=splitPaste(text,di);const s=empIdx[eid];
+    setEmps(l=>{cap(l);const next=l.map((x,ei)=>{const ri=ei-s;if(ri<0)return x;let dR,fR;if(il){if(ri>=f.length)return x;dR=fR=f[ri];}else{const b=ri*2;if(b>=f.length)return x;dR=f[b];fR=f[b+1]||[];}const nd=x.days.map((day,dj)=>{if(dj<di)return day;const c=dj-di;return{debut:normT(getCell(dR,c,il,false))||day.debut,fin:normT(getCell(il?dR:fR,c,il,true))||day.fin};});return{...x,days:nd};});commit();return next;});
   };
   const onPasteDispo=(e,eid,di)=>{
     const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
-    const{filtered,interleaved}=splitPaste(text,di);const startEi=empIdx[eid];
-    setEmps(l=>l.map((x,ei)=>{const ri=ei-startEi;if(ri<0)return x;let dRow,fRow;if(interleaved){if(ri>=filtered.length)return x;dRow=fRow=filtered[ri];}else{const b=ri*2;if(b>=filtered.length)return x;dRow=filtered[b];fRow=filtered[b+1]||[];}const newDispo=getDispo(x).map((d,dj)=>{if(dj<di)return d;const c=dj-di;return{debut:normT(getCell(dRow,c,interleaved,false))||d.debut,fin:normT(getCell(interleaved?dRow:fRow,c,interleaved,true))||d.fin};});return{...x,dispo:newDispo};}));
+    const{filtered:f,interleaved:il}=splitPaste(text,di);const s=empIdx[eid];
+    setEmps(l=>l.map((x,ei)=>{const ri=ei-s;if(ri<0)return x;let dR,fR;if(il){if(ri>=f.length)return x;dR=fR=f[ri];}else{const b=ri*2;if(b>=f.length)return x;dR=f[b];fR=f[b+1]||[];}const nd=getDispo(x).map((d,dj)=>{if(dj<di)return d;const c=dj-di;return{debut:normT(getCell(dR,c,il,false))||d.debut,fin:normT(getCell(il?dR:fR,c,il,true))||d.fin};});return{...x,dispo:nd};}));
   };
   const onPasteCin=(e,di)=>{
     const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
-    const filtered=filterEmpty(text.trimEnd().split("\n").map(r=>r.split("\t")));
-    const oRow=filtered[0]||[],fRow=filtered[1]||[];capCin(cin);
-    setCin(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;return{ouverture:normT((oRow[c]||"").trim())||x.ouverture,fermeture:normT((fRow[c]||"").trim())||x.fermeture};}));commitCin();
+    const f=filterEmpty(text.trimEnd().split("\n").map(r=>r.split("\t")));
+    const oR=f[0]||[],fR=f[1]||[];capCin(cin);
+    setCin(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;return{ouverture:normT((oR[c]||"").trim())||x.ouverture,fermeture:normT((fR[c]||"").trim())||x.fermeture};}));commitCin();
   };
   const onPasteEff=(e,di)=>{
     const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
-    const filtered=filterEmpty(text.trimEnd().split("\n").map(r=>r.split("\t")));
-    const interleaved=filtered[0].length>=(7-di)*2,jRow=filtered[0]||[],sRow=filtered[1]||[];
-    setEff(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;return{jour:interleaved?((jRow[c*2]||"").trim()):((jRow[c]||"").trim())||x.jour,soir:interleaved?((jRow[c*2+1]||"").trim()):((sRow[c]||"").trim())||x.soir};}));
+    const f=filterEmpty(text.trimEnd().split("\n").map(r=>r.split("\t")));
+    const il=f[0].length>=(7-di)*2,jR=f[0]||[],sR=f[1]||[];
+    setEff(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;return{jour:il?((jR[c*2]||"").trim()):((jR[c]||"").trim())||x.jour,soir:il?((jR[c*2+1]||"").trim()):((sR[c]||"").trim())||x.soir};}));
   };
 
-  // ── Effectif calculator ──
   const calcEffDi=(newDays,di,ouvH,ei,debut,fin)=>{
     const thr=ouvH+params.jourDecalage;let jour=0,soir=0;
     emps.forEach((row,i)=>{
@@ -382,7 +335,6 @@ function App(){
     return{jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};
   };
 
-  // ── Assign one employee for one day ──
   const assignerUnJour=(newDays,ei,di)=>{
     const emp=emps[ei];
     if(isBlocked(emp.particularite))return false;
@@ -431,7 +383,7 @@ function App(){
 
   const genererTous=()=>{
     const newDays=emps.map(e=>e.days.map(d=>({...d})));let assigns=0;
-    for(let ei=0;ei<emps.length;ei++){if(isBlocked(emps[ei].particularite))continue;for(let di=0;di<7;di++){if(assignerUnJour(newDays,ei,di))assigns++;}}
+    for(let ei=0;ei<emps.length;ei++){for(let di=0;di<7;di++){if(assignerUnJour(newDays,ei,di))assigns++;}}
     cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();
     showMsg(`${assigns} quart${assigns!==1?"s":""} assigné${assigns!==1?"s":""}`);setPage("horaire");
   };
@@ -567,7 +519,6 @@ function App(){
     showMsg(`${assigns} quart${assigns!==1?"s":""} assigné${assigns!==1?"s":""}`);setPage("horaire");
   };
 
-  // ── Render helpers ──
   const TotalCell=({id})=>{
     const tot=rowTotals[id],row=emps[empIdx[id]];
     const maxH=row&&row.particularite==="Max heures"&&row.maxH?parseFloat(row.maxH):null;
@@ -626,6 +577,7 @@ function App(){
   );
 
   const tabS=a=>({background:a?"#1e293b":"#fff",color:a?"#fff":"#64748b",border:"1.5px solid #e2e8f0",borderRadius:0,padding:"6px 14px",cursor:"pointer",fontSize:12,fontWeight:600});
+  const resetBtnS=(active)=>({border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,width:"100%",textAlign:"left",background:active?"#fef2f2":"#fff",color:active?"#dc2626":"#475569",transition:"background .15s"});
 
   return(
     <div style={{fontFamily:"'Inter','Segoe UI',sans-serif",background:"#5a6080",minHeight:"100vh",padding:"24px 12px"}}>
@@ -655,10 +607,17 @@ function App(){
         <PanelBtn onClick={loadTestData}>🧪 Test</PanelBtn>
         <PanelBtn onClick={()=>importRef.current.click()}>📥 Importer</PanelBtn>
         <PanelSection label="HISTORIQUE"/>
-        <div style={{display:"flex"}}>
+        <div style={{display:"flex",borderBottom:"1px solid #f1f5f9"}}>
           <button onClick={undo} style={{flex:1,border:"none",borderRight:"1px solid #f1f5f9",padding:"9px 0",cursor:"pointer",fontSize:16,background:"#fff",color:"#475569"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>↩</button>
           <button onClick={redo} style={{flex:1,border:"none",padding:"9px 0",cursor:"pointer",fontSize:16,background:"#fff",color:"#475569"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>↪</button>
         </div>
+        <PanelSection label="RÉINITIALISER"/>
+        <button onClick={effacerHoraire} style={resetBtnS(confirmHoraire)} onMouseEnter={e=>e.currentTarget.style.background=confirmHoraire?"#fee2e2":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=confirmHoraire?"#fef2f2":"#fff"}>
+          {confirmHoraire?"⚠️ Confirmer?":"🗑 Effacer horaire"}
+        </button>
+        <button onClick={effacerDispos} style={resetBtnS(confirmDispo)} onMouseEnter={e=>e.currentTarget.style.background=confirmDispo?"#fee2e2":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=confirmDispo?"#fef2f2":"#fff"}>
+          {confirmDispo?"⚠️ Confirmer?":"🗑 Effacer dispos"}
+        </button>
       </div>
 
       {genMsg&&<div style={{position:"fixed",bottom:24,right:16,zIndex:2000,padding:"10px 16px",background:"#dcfce7",border:"1.5px solid #16a34a",fontSize:12,fontWeight:600,color:"#15803d",borderRadius:6,boxShadow:"0 4px 12px rgba(0,0,0,.15)"}}>{genMsg}</div>}
