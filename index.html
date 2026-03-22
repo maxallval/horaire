@@ -40,8 +40,20 @@ const BOOL_PARAMS=new Set(["sepDecimal","tolEffOn","genEcraser","genFermetureCom
 const SK={cin:"horaire:cin",eff:"horaire:eff",parts:"horaire:parts"};
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
-const stoSave=async(k,v)=>{try{await window.storage.set(k,JSON.stringify(v));}catch(e){}};
-const stoLoad=async k=>{try{const r=await window.storage.get(k);return r?JSON.parse(r.value):null;}catch(e){return null;}};
+const stoSave=async(k,v)=>{
+  try{
+    if(!window.storage)return false;
+    await window.storage.set(k,JSON.stringify(v));
+    return true;
+  }catch(e){console.warn("stoSave",k,e);return false;}
+};
+const stoLoad=async k=>{
+  try{
+    if(!window.storage)return null;
+    const r=await window.storage.get(k);
+    return r?JSON.parse(r.value):null;
+  }catch(e){return null;}
+};
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 const addD=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
@@ -192,6 +204,7 @@ function App(){
   const[genMsg,setGenMsg]=useState(null);
   const[importMsg,setImportMsg]=useState(null);
   const[loaded,setLoaded]=useState(false);
+  const[savedOk,setSavedOk]=useState(null); // null=init, true=ok, false=erreur
   const refs=useRef({});
   const cinRefs=useRef({});
   const importRef=useRef(null);
@@ -213,13 +226,22 @@ function App(){
           return{...emp,particularite:p.particularite||"",maxH:p.maxH||"",noteP:p.noteP||""};
         }));
       }
+      // Test rapide pour confirmer que le storage fonctionne
+      const testOk=await stoSave("horaire:test","ok");
+      setSavedOk(testOk);
       setLoaded(true);
     })();
   },[]);
 
   // ── Sauvegarde automatique ──
-  useEffect(()=>{if(loaded)stoSave(SK.cin,cin);},[cin,loaded]);
-  useEffect(()=>{if(loaded)stoSave(SK.eff,eff);},[eff,loaded]);
+  useEffect(()=>{
+    if(!loaded)return;
+    stoSave(SK.cin,cin);
+  },[cin,loaded]);
+  useEffect(()=>{
+    if(!loaded)return;
+    stoSave(SK.eff,eff);
+  },[eff,loaded]);
   useEffect(()=>{
     if(!loaded)return;
     const parts={};
@@ -363,6 +385,7 @@ function App(){
   // ── Assign one employee for one day ──
   const assignerUnJour=(newDays,ei,di)=>{
     const emp=emps[ei];
+    if(isBlocked(emp.particularite))return false;
     const ch=cin[di];if(!ch.ouverture||!ch.fermeture)return false;
     if(newDays[ei][di].debut&&newDays[ei][di].fin)return false;
     const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture),ferEff=toH(getFerEff(ch.fermeture));
@@ -645,6 +668,7 @@ function App(){
         <div style={{display:"flex",alignItems:"stretch",justifyContent:"space-between",marginBottom:12,flexWrap:"nowrap",gap:6,height:44}}>
           <div style={{display:"flex",alignItems:"center",paddingRight:6}}>
             <h1 style={{margin:0,fontSize:24,fontWeight:800,color:"#fff",fontFamily:"Georgia,serif",letterSpacing:"-0.5px",lineHeight:1,whiteSpace:"nowrap"}}>Horaire</h1>
+            {savedOk!==null&&<span style={{marginLeft:8,fontSize:10,color:savedOk?"#86efac":"#fca5a5"}} title={savedOk?"Sauvegarde active":"Sauvegarde indisponible"}>{savedOk?"💾":"⚠️"}</span>}
           </div>
           <div style={{display:"flex",alignItems:"center",background:"#fff",border:"1.5px solid #e2e8f0",overflow:"hidden"}}>
             <button onClick={()=>setWs(d=>addD(d,-7))} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#64748b",padding:"6px 10px",lineHeight:1}}>‹</button>
