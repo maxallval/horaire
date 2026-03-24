@@ -27,8 +27,8 @@ const DAYS=["Vendredi","Samedi","Dimanche","Lundi","Mardi","Mercredi","Jeudi"];
 const DS=["VEN","SAM","DIM","LUN","MAR","MER","JEU"];
 const PARTS=[{value:"",label:"—"},{value:"Vacances",label:"Vacances"},{value:"Sans solde",label:"Sans solde"},{value:"Max heures",label:"Heures Max"},{value:"Personnalisé",label:"Personnalisé"}];
 const CPR=34,CE=140,CP=150,CD=128,CT=68,CX=32,TW=CPR+CE+CP+CD*7+CT+CX,EPS=0.02;
-const DEF_P={jourDecalage:2,jourLimite:17,jourPoids:0.5,soirDebut:18.1,soirLimite:20,soirPoids:0.5,sepDecimal:",",tolEff:0,tolEffOn:false,genMinQuart:4,genEcraser:false,genDelaiApresOuverture:0.5,genSeuilOuverture:12,genNbOuverture:3,genNbFermetureCinema:1,genFermetureComptoir:true,genSeuilHaut:24,genComptoirHaut:23,genSeuilBas:22,genComptoirBas:22,genOuvertureFlexible:true,genMaxHeures:42,dispoFinCorrection:true,dispoFinSeuil:13};
-const BOOL_PARAMS=new Set(["sepDecimal","tolEffOn","genEcraser","genFermetureComptoir","genOuvertureFlexible","dispoFinCorrection"]);
+const DEF_P={jourDecalage:2,jourLimite:17,jourPoids:0.5,soirDebut:18.1,soirLimite:20,soirPoids:0.5,sepDecimal:",",tolEff:0,tolEffOn:false,genMinQuart:4,genEcraser:false,genDelaiApresOuverture:0.5,genSeuilOuverture:12,genNbOuverture:3,genNbFermetureCinema:1,genFermetureComptoir:true,genSeuilHaut:24,genComptoirHaut:23,genSeuilBas:22,genComptoirBas:22,genOuvertureFlexible:true,genMaxHeures:42,dispoFinCorrection:true,dispoFinSeuil:13,dispoSkipPrioZero:true};
+const BOOL_PARAMS=new Set(["sepDecimal","tolEffOn","genEcraser","genFermetureComptoir","genOuvertureFlexible","dispoFinCorrection","dispoSkipPrioZero"]);
 const SK={cin:"horaire:cin",eff:"horaire:eff",parts:"horaire:parts"};
 
 const stoSave=async(k,v)=>{try{if(!window.storage)return false;await window.storage.set(k,JSON.stringify(v));return true;}catch(e){return false;}};
@@ -221,6 +221,7 @@ async function parsePDF(file,emps,getDispo){
   const newEmps=emps.map(e=>({...e,dispo:getDispo(e).map(d=>({...d}))}));
 
   for(const{dispo,priorite}of dispoAvecPrio){
+    if(params.dispoSkipPrioZero&&String(priorite)==="0")continue;
     // Chercher l'employé dont le numéro de priorité correspond
     const idx=newEmps.findIndex(e=>!isBlocked(e.particularite)&&String(e.prio)===String(priorite));
     if(idx>=0){newEmps[idx]={...newEmps[idx],dispo};matched++;}
@@ -871,6 +872,13 @@ function App(){
                 <div style={{display:"flex",gap:8,flexShrink:0}}><ToggleBtn val={true} cur={params.dispoFinCorrection} onClick={v=>setP("dispoFinCorrection",v)} label="Activé"/><ToggleBtn val={false} cur={params.dispoFinCorrection} onClick={v=>setP("dispoFinCorrection",v)} label="Désactivé"/></div>
               </div>
               {params.dispoFinCorrection&&<ParamRow label="Seuil de correction (fin < Xh)" value={params.dispoFinSeuil} onChange={v=>setP("dispoFinSeuil",v)} unit="h" step="1"/>}
+            </div>
+            <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:"#fee2e2"}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>IMPORT PDF</h3></div>
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
+                <div style={{flex:1,paddingRight:16}}><div style={{fontSize:12,color:"#475569",fontWeight:500}}>Ignorer les disponibilités en priorité 0</div><div style={{fontSize:10,color:"#94a3b8",marginTop:3,lineHeight:1.5}}>Les lignes de disponibilité dont le numéro de priorité est 0 ne seront pas importées.</div></div>
+                <div style={{display:"flex",gap:8,flexShrink:0}}><ToggleBtn val={true} cur={params.dispoSkipPrioZero} onClick={v=>setP("dispoSkipPrioZero",v)} label="Activé"/><ToggleBtn val={false} cur={params.dispoSkipPrioZero} onClick={v=>setP("dispoSkipPrioZero",v)} label="Désactivé"/></div>
+              </div>
             </div>
             <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:"#e2e8f0"}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>FORMAT DES NOMBRES</h3></div>
