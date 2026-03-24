@@ -357,6 +357,7 @@ function App(){
     setConfirmDispo(false);showMsg("Disponibilités effacées");
   };
 
+  const clearOnType=useRef(new Set());
   const rk=(eid,di,f)=>`${eid}-${di}-${f}`;
   const ck=(di,f)=>`cin-${di}-${f}`;
   const rd=(eid,di,f)=>`d-${eid}-${di}-${f}`;
@@ -377,6 +378,9 @@ function App(){
     if(e.key==="ArrowLeft"){e.preventDefault();if(di>0)focusRef(rk(eid,di-1,f));return;}
     if(e.key==="Enter"){e.preventDefault();blurDay(eid,di,f,v);setTimeout(()=>focusNext(eid,di,f),0);return;}
     if((e.key==="Delete"||e.key==="Backspace")&&v){e.preventDefault();delDay(eid,di,f);}
+    if(e.key.length===1&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&clearOnType.current.has(rk(eid,di,f))){
+      clearOnType.current.delete(rk(eid,di,f));e.preventDefault();updDay(eid,di,f,e.key);return;
+    }
   };
   const onCinKD=(e,di,f)=>{
     const v=e.target.value;
