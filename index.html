@@ -15,6 +15,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:#5a6080;min-height:100
 input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{-webkit-appearance:none;}
 input[type=number]{-moz-appearance:textfield;}
 select{-webkit-appearance:none;-moz-appearance:none;}
+input::placeholder{color:#a0a8b8;opacity:1;}
 </style>
 </head>
 <body>
@@ -26,8 +27,8 @@ const DAYS=["Vendredi","Samedi","Dimanche","Lundi","Mardi","Mercredi","Jeudi"];
 const DS=["VEN","SAM","DIM","LUN","MAR","MER","JEU"];
 const PARTS=[{value:"",label:"—"},{value:"Vacances",label:"Vacances"},{value:"Sans solde",label:"Sans solde"},{value:"Max heures",label:"Heures Max"},{value:"Personnalisé",label:"Personnalisé"}];
 const CE=140,CP=150,CD=128,CT=68,CX=32,TW=CE+CP+CD*7+CT+CX,EPS=0.02;
-const DEF_P={jourDecalage:2,jourLimite:17,jourPoids:0.5,soirDebut:18.1,soirLimite:20,soirPoids:0.5,sepDecimal:",",tolEff:0,tolEffOn:false,genMinQuart:4,genEcraser:false,genDelaiApresOuverture:0.5,genSeuilOuverture:12,genNbOuverture:3,genNbFermetureCinema:1,genFermetureComptoir:true,genSeuilHaut:24,genComptoirHaut:23,genSeuilBas:22,genComptoirBas:22,genOuvertureFlexible:true,genMaxHeures:42};
-const BOOL_PARAMS=new Set(["sepDecimal","tolEffOn","genEcraser","genFermetureComptoir","genOuvertureFlexible"]);
+const DEF_P={jourDecalage:2,jourLimite:17,jourPoids:0.5,soirDebut:18.1,soirLimite:20,soirPoids:0.5,sepDecimal:",",tolEff:0,tolEffOn:false,genMinQuart:4,genEcraser:false,genDelaiApresOuverture:0.5,genSeuilOuverture:12,genNbOuverture:3,genNbFermetureCinema:1,genFermetureComptoir:true,genSeuilHaut:24,genComptoirHaut:23,genSeuilBas:22,genComptoirBas:22,genOuvertureFlexible:true,genMaxHeures:42,dispoFinCorrection:true,dispoFinSeuil:13};
+const BOOL_PARAMS=new Set(["sepDecimal","tolEffOn","genEcraser","genFermetureComptoir","genOuvertureFlexible","dispoFinCorrection"]);
 const SK={cin:"horaire:cin",eff:"horaire:eff",parts:"horaire:parts"};
 
 const stoSave=async(k,v)=>{try{if(!window.storage)return false;await window.storage.set(k,JSON.stringify(v));return true;}catch(e){return false;}};
@@ -89,11 +90,10 @@ const DEF_CIN=DAYS.map(()=>({ouverture:"10:00",fermeture:"23:00"}));
 const DEF_EFF=DAYS.map(()=>({jour:"",soir:""}));
 
 const Cols=()=>(<colgroup><col style={{width:CE}}/><col style={{width:CP}}/>{DAYS.map((_,i)=><col key={i} style={{width:CD}}/>)}<col style={{width:CT}}/><col style={{width:CX}}/></colgroup>);
-const Pill=({label,value,color})=>(<div style={{background:"#fff",border:"1.5px solid #e2e8f0",padding:"4px 12px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",alignSelf:"stretch"}}><div style={{fontSize:9,color:"#94a3b8",fontWeight:600,letterSpacing:"0.5px",textTransform:"uppercase"}}>{label}</div><div style={{fontSize:13,fontWeight:800,color,marginTop:1}}>{value}</div></div>);
 const ToggleBtn=({val,cur,onClick,label})=>{const on=cur===val;return(<button onClick={()=>onClick(val)} style={{padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:0,border:`1.5px solid ${on?"#1e293b":"#e2e8f0"}`,background:on?"#1e293b":"#fff",color:on?"#fff":"#475569"}}>{label}</button>);};
 const PartSelect=({value,onChange})=>(<select value={value} onChange={e=>onChange("particularite",e.target.value)} style={selS}>{PARTS.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select>);
 const PanelSection=({label,first})=>(<div style={{padding:"5px 10px 4px",background:"#f8fafc",borderTop:first?undefined:"2px solid #e2e8f0",borderBottom:"1px solid #e2e8f0"}}><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px"}}>{label}</span></div>);
-const PanelBtn=({onClick,children,green})=>(<button onClick={onClick} style={{border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,color:green?"#fff":"#475569",background:green?"#16a34a":"#fff",textAlign:"left",display:"flex",flexDirection:"column",alignItems:green?"center":"flex-start",gap:1,width:"100%"}} onMouseEnter={e=>e.currentTarget.style.background=green?"#15803d":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=green?"#16a34a":"#fff"}>{children}</button>);
+const PanelBtn=({onClick,children,green,blue})=>(<button onClick={onClick} style={{border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,color:(green||blue)?"#fff":"#475569",background:green?"#16a34a":blue?"#2563eb":"#fff",textAlign:"left",display:"flex",flexDirection:"column",alignItems:(green||blue)?"center":"flex-start",gap:1,width:"100%"}} onMouseEnter={e=>e.currentTarget.style.background=green?"#15803d":blue?"#1d4ed8":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=green?"#16a34a":blue?"#2563eb":"#fff"}>{children}</button>);
 const SmallBtn=({onClick,label})=>(<button onClick={onClick} style={{flex:1,border:"1.5px solid #e2e8f0",background:"#fff",padding:"5px 0",fontSize:11,fontWeight:700,color:"#475569",cursor:"pointer",borderRadius:3}} onMouseEnter={e=>{e.currentTarget.style.background="#1e293b";e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor="#1e293b";}} onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.color="#475569";e.currentTarget.style.borderColor="#e2e8f0";}}>{label}</button>);
 
 function PartCell({row,onChange}){
@@ -117,6 +117,67 @@ function ParamRow({label,value,onChange,unit,step}){
   return(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}><span style={{fontSize:12,color:"#475569",flex:1}}>{label}</span><div style={{display:"flex",alignItems:"center",gap:6}}><input type="number" value={value} onChange={e=>onChange(e.target.value)} step={step||"0.1"} style={{border:"1px solid #e2e8f0",padding:"4px 12px",fontSize:13,fontWeight:600,color:"#0f172a",width:100,outline:"none",borderRadius:0}}/><span style={{fontSize:11,color:"#94a3b8",minWidth:16}}>{unit}</span></div></div>);
 }
 
+function StickyHeader({cin,eff,effCalcs,wd,params,cfk,setCfk,cinRefs,updCin,blurCin,onCinKD,onPasteCin,setEv,onPasteEff,sep}){
+  const ck=(di,f)=>`cin-${di}-${f}`;
+  return(
+    <div style={{position:"sticky",top:0,zIndex:20,background:"#fff",boxShadow:"0 2px 6px rgba(0,0,0,.12)"}}>
+      <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/>
+        <tbody>
+          <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
+            <td style={{padding:"5px 8px 5px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>HEURES D'OUVERTURE</td><td/>
+            {cin.map((ch,di)=>{
+              const kO=ck(di,"ouverture"),kF=ck(di,"fermeture");
+              return(
+                <td key={di} style={{padding:0,textAlign:"center",verticalAlign:"middle",...blS(di)}}>
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3}}>
+                    <input type="text" value={ch.ouverture} ref={el=>cinRefs.current[kO]=el} onChange={e=>updCin(di,"ouverture",e.target.value)} onBlur={e=>{blurCin(di,"ouverture",e.target.value);setCfk(null);}} onFocus={()=>setCfk(kO)} onClick={e=>e.target.select()} onKeyDown={e=>onCinKD(e,di,"ouverture")} onPaste={e=>onPasteCin(e,di)} maxLength={5} autoComplete="off" style={cinS("#dbeafe",cfk===kO)}/>
+                    <div style={{width:16,height:1,background:"#e2e8f0"}}/>
+                    <input type="text" value={ch.fermeture} ref={el=>cinRefs.current[kF]=el} onChange={e=>updCin(di,"fermeture",e.target.value)} onBlur={e=>{blurCin(di,"fermeture",e.target.value);setCfk(null);}} onFocus={()=>setCfk(kF)} onClick={e=>e.target.select()} onKeyDown={e=>onCinKD(e,di,"fermeture")} onPaste={e=>onPasteCin(e,di)} maxLength={5} autoComplete="off" style={cinS("#fff3e0",cfk===kF)}/>
+                  </div>
+                </td>
+              );
+            })}
+            <td/><td/>
+          </tr>
+          <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
+            <td style={{padding:"5px 8px 5px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>EFFECTIFS</td><td/>
+            {eff.map((ef,di)=>{
+              const{jour:cj,soir:cs}=effCalcs[di];
+              const mj=parseFloat((ef.jour||"").replace(",","."))||0,ms=parseFloat((ef.soir||"").replace(",","."))||0;
+              return(
+                <td key={di} style={{padding:0,textAlign:"center",verticalAlign:"middle",...blS(di)}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                    {[{f:"jour",cv:cj,mn:mj},{f:"soir",cv:cs,mn:ms}].map(({f,cv,mn},fi)=>{
+                      const exact=mn>0&&eqEff(cv,mn),close=!exact&&mn>0&&params.tolEffOn&&params.tolEff>0&&Math.abs(cv-mn)<=params.tolEff&&cv>0,below=mn>0&&!exact&&!close&&cv<mn,above=mn>0&&!exact&&cv>mn;
+                      return(
+                        <span key={f} style={{display:"flex",alignItems:"center",gap:4}}>
+                          {fi>0&&<div style={{width:1,height:36,background:"#e2e8f0"}}/>}
+                          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                            <span style={{fontSize:9,fontWeight:600,color:"#94a3b8",letterSpacing:"0.4px"}}>{f.toUpperCase()}</span>
+                            <input type="text" value={ef[f]} onChange={e=>setEv(di,f,e.target.value)} maxLength={5} autoComplete="off" style={effS(exact,close,below,above)} placeholder="—" onPaste={e=>onPasteEff(e,di)}/>
+                            <span style={{fontSize:9,fontWeight:700,color:mn===0?"#94a3b8":cv>=mn?"#16a34a":"#dc2626"}}>{cv>0?cv.toString().replace(".",sep):"—"}</span>
+                          </div>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </td>
+              );
+            })}
+            <td/><td/>
+          </tr>
+          <tr style={{borderBottom:"2px solid #c8cdd8",background:"#f8fafc",height:26}}>
+            <td style={TH({textAlign:"left",paddingLeft:18})}>ÉQUIPIER</td>
+            <td style={TH({borderLeft:"1px solid #c8cdd8"})}>PARTICULARITÉ</td>
+            {DS.map((d,i)=>(<td key={d} style={TH({borderLeft:"1px solid #c8cdd8",borderRight:i===6?"1px solid #c8cdd8":undefined})}><div style={{color:"#475569"}}>{d}</div><div style={{fontWeight:500,fontSize:10,color:"#64748b",marginTop:1}}>{fmt(wd[i],true)}</div></td>))}
+            <td style={TH({color:"#0f172a"})}>TOTAL</td><td style={TH()}/>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 async function parsePDF(file,emps,getDispo){
   const buf=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf}).promise;
@@ -131,10 +192,7 @@ async function parsePDF(file,emps,getDispo){
   const clusters=[];
   for(const x of plageXs){const last=clusters[clusters.length-1];if(!last||x-last.max>15)clusters.push({xs:[x],max:x});else{last.xs.push(x);last.max=x;}}
   const colXs=clusters.sort((a,b)=>b.xs.length-a.xs.length).slice(0,7).map(c=>Math.round(c.xs.reduce((s,x)=>s+x,0)/c.xs.length)).sort((a,b)=>a-b);
-  const dispItems=allItems
-    .filter(it=>/^disponibilit[eé]$/i.test(it.t))
-    .map(dispIt=>{const c=allItems.filter(it=>Math.abs(it.y-dispIt.y)<6&&it.x<dispIt.x&&/^\d{1,2}$/.test(it.t)).sort((a,b)=>b.x-a.x);return{dispIt,priorite:c.length?parseInt(c[0].t):9999};})
-    .sort((a,b)=>a.priorite-b.priorite).map(({dispIt})=>dispIt);
+  const dispItems=allItems.filter(it=>/^disponibilit[eé]$/i.test(it.t)).map(dispIt=>{const c=allItems.filter(it=>Math.abs(it.y-dispIt.y)<6&&it.x<dispIt.x&&/^\d{1,2}$/.test(it.t)).sort((a,b)=>b.x-a.x);return{dispIt,priorite:c.length?parseInt(c[0].t):9999};}).sort((a,b)=>a.priorite-b.priorite).map(({dispIt})=>dispIt);
   const dispoLignes=dispItems.map(dispIt=>{
     const dispo=DAYS.map(()=>({debut:"",fin:""}));
     allItems.filter(it=>Math.abs(it.y-dispIt.y)<6&&rePlage.test(it.t)).forEach(it=>{
@@ -161,6 +219,7 @@ function App(){
   const[cin,setCin]=useState(DEF_CIN);
   const[eff,setEff]=useState(DEF_EFF);
   const[fk,setFk]=useState(null);
+  const[dfk,setDfk]=useState(null);
   const[cfk,setCfk]=useState(null);
   const[page,setPage]=useState("horaire");
   const[params,setParams]=useState(DEF_P);
@@ -170,6 +229,7 @@ function App(){
   const[savedOk,setSavedOk]=useState(null);
   const[confirmHoraire,setConfirmHoraire]=useState(false);
   const[confirmDispo,setConfirmDispo]=useState(false);
+  const[showReequMenu,setShowReequMenu]=useState(false);
   const refs=useRef({});
   const cinRefs=useRef({});
   const importRef=useRef(null);
@@ -178,12 +238,11 @@ function App(){
 
   useEffect(()=>{
     (async()=>{
-      const[savedCin,savedEff,savedParts]=await Promise.all([stoLoad(SK.cin),stoLoad(SK.eff),stoLoad(SK.parts)]);
-      if(savedCin&&savedCin.length===7)setCin(savedCin);
-      if(savedEff&&savedEff.length===7)setEff(savedEff);
-      if(savedParts){setEmps(l=>l.map(emp=>{const p=savedParts[emp.id];if(!p)return emp;return{...emp,particularite:p.particularite||"",maxH:p.maxH||"",noteP:p.noteP||""};}));}
-      const testOk=await stoSave("horaire:test","ok");
-      setSavedOk(testOk);
+      const[sc,se,sp]=await Promise.all([stoLoad(SK.cin),stoLoad(SK.eff),stoLoad(SK.parts)]);
+      if(sc&&sc.length===7)setCin(sc);
+      if(se&&se.length===7)setEff(se);
+      if(sp)setEmps(l=>l.map(e=>{const p=sp[e.id];return p?{...e,particularite:p.particularite||"",maxH:p.maxH||"",noteP:p.noteP||""}:e;}));
+      setSavedOk(await stoSave("horaire:test","ok"));
       setLoaded(true);
     })();
   },[]);
@@ -191,14 +250,22 @@ function App(){
   useEffect(()=>{if(loaded)stoSave(SK.eff,eff);},[eff,loaded]);
   useEffect(()=>{
     if(!loaded)return;
-    const parts={};
-    emps.forEach(e=>{parts[e.id]={particularite:e.particularite,maxH:e.maxH,noteP:e.noteP};});
-    stoSave(SK.parts,parts);
+    const p={};emps.forEach(e=>{p[e.id]={particularite:e.particularite,maxH:e.maxH,noteP:e.noteP};});
+    stoSave(SK.parts,p);
   },[emps,loaded]);
 
   const sep=params.sepDecimal;
   const fmtH=useCallback(h=>fmtDec(h,sep),[sep]);
-  const getDispo=useCallback(emp=>emp.dispo&&emp.dispo.length===7?emp.dispo:mkDispo(),[]);
+  const getDispo=useCallback(emp=>{
+    const d=emp.dispo&&emp.dispo.length===7?emp.dispo:mkDispo();
+    if(!params.dispoFinCorrection)return d;
+    return d.map(day=>{
+      if(!day.fin)return day;
+      const h=toH(day.fin);
+      if(h!==null&&h<params.dispoFinSeuil)return{...day,fin:toStr(h+12)};
+      return day;
+    });
+  },[params.dispoFinCorrection,params.dispoFinSeuil]);
   const getMaxH=useCallback(emp=>emp.particularite==="Max heures"&&emp.maxH?parseFloat(emp.maxH):params.genMaxHeures,[params.genMaxHeures]);
   const empIdx=useMemo(()=>{const m={};emps.forEach((e,i)=>m[e.id]=i);return m;},[emps]);
   const rowTotals=useMemo(()=>{const m={};emps.forEach(e=>{m[e.id]=e.days.reduce((s,d)=>s+calcH(d.debut,d.fin),0);});return m;},[emps]);
@@ -215,6 +282,15 @@ function App(){
     });
     return{jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};
   }),[emps,cin,params.jourDecalage,params.jourLimite,params.jourPoids,params.soirDebut,params.soirLimite,params.soirPoids]);
+
+  const deficits=useMemo(()=>DAYS.map((_,di)=>{
+    const tJ=parseFloat((eff[di].jour||"").replace(",","."))||0;
+    const tS=parseFloat((eff[di].soir||"").replace(",","."))||0;
+    const dJ=tJ>0?Math.max(0,Math.round((tJ-effCalcs[di].jour)*10)/10):0;
+    const dS=tS>0?Math.max(0,Math.round((tS-effCalcs[di].soir)*10)/10):0;
+    return{jour:dJ,soir:dS,hasDeficit:dJ>EPS||dS>EPS};
+  }),[eff,effCalcs]);
+
   const wd=useMemo(()=>DAYS.map((_,i)=>addD(ws,i)),[ws]);
   const wl=useMemo(()=>`${fmt(ws)} au ${fmt(addD(ws,6))}`,[ws]);
   const iw=useMemo(()=>isoW(ws),[ws]);
@@ -241,8 +317,8 @@ function App(){
   const updCin=(di,f,v)=>setCin(l=>{capCin(l);return l.map((x,i)=>i===di?{...x,[f]:v}:x);});
   const blurCin=(di,f,v)=>{commitCin();setCin(l=>l.map((x,i)=>i===di?{...x,[f]:normT(v)}:x));};
   const delCin=(di,f)=>setCin(l=>{capCin(l);commitCin();return l.map((x,i)=>i===di?{...x,[f]:""}:x);});
-  const updDispo=(id,di,f,v)=>setEmps(l=>l.map(x=>x.id!==id?x:{...x,dispo:getDispo(x).map((d,i)=>i===di?{...d,[f]:v}:d)}));
-  const blurDispo=(id,di,f,v)=>setEmps(l=>l.map(x=>x.id!==id?x:{...x,dispo:getDispo(x).map((d,i)=>i===di?{...d,[f]:normT(v)}:d)}));
+  const updDispo=(id,di,f,v)=>setEmps(l=>l.map(x=>x.id!==id?x:{...x,dispo:(x.dispo&&x.dispo.length===7?x.dispo:mkDispo()).map((d,i)=>i===di?{...d,[f]:v}:d)}));
+  const blurDispo=(id,di,f,v)=>setEmps(l=>l.map(x=>x.id!==id?x:{...x,dispo:(x.dispo&&x.dispo.length===7?x.dispo:mkDispo()).map((d,i)=>i===di?{...d,[f]:normT(v)}:d)}));
   const setEmp=(id,f,v)=>setEmps(l=>l.map(x=>x.id===id?{...x,[f]:v}:x));
   const addEmp=()=>setEmps(l=>[...l,mkE()]);
   const remEmp=id=>setEmps(l=>l.filter(x=>x.id!==id));
@@ -254,7 +330,6 @@ function App(){
     try{const{newEmps,matched}=await parsePDF(file,emps,getDispo);setEmps(newEmps);setImportMsg(`✓ ${matched} employé${matched!==1?"s":""} importé${matched!==1?"s":""}`);setTimeout(()=>setImportMsg(null),5000);setPage("dispo");}
     catch(err){setImportMsg("Erreur : "+err.message);setTimeout(()=>setImportMsg(null),5000);}
   };
-
   const effacerHoraire=()=>{
     if(!confirmHoraire){setConfirmHoraire(true);setTimeout(()=>setConfirmHoraire(false),3000);return;}
     cap(emps);setEmps(l=>l.map(e=>({...e,days:DAYS.map(()=>({debut:"",fin:""}))})));commit();
@@ -268,6 +343,7 @@ function App(){
 
   const rk=(eid,di,f)=>`${eid}-${di}-${f}`;
   const ck=(di,f)=>`cin-${di}-${f}`;
+  const rd=(eid,di,f)=>`d-${eid}-${di}-${f}`;
   const focusRef=k=>{if(refs.current[k])refs.current[k].focus();};
   const focusCinRef=k=>{if(k&&cinRefs.current[k])cinRefs.current[k].focus();};
   const focusNext=(eid,di,f)=>{
@@ -308,7 +384,8 @@ function App(){
   const onPasteDispo=(e,eid,di)=>{
     const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
     const{filtered:f,interleaved:il}=splitPaste(text,di);const s=empIdx[eid];
-    setEmps(l=>l.map((x,ei)=>{const ri=ei-s;if(ri<0)return x;let dR,fR;if(il){if(ri>=f.length)return x;dR=fR=f[ri];}else{const b=ri*2;if(b>=f.length)return x;dR=f[b];fR=f[b+1]||[];}const nd=getDispo(x).map((d,dj)=>{if(dj<di)return d;const c=dj-di;return{debut:normT(getCell(dR,c,il,false))||d.debut,fin:normT(getCell(il?dR:fR,c,il,true))||d.fin};});return{...x,dispo:nd};}));
+    const rawDispo=emp=>emp.dispo&&emp.dispo.length===7?emp.dispo:mkDispo();
+    setEmps(l=>l.map((x,ei)=>{const ri=ei-s;if(ri<0)return x;let dR,fR;if(il){if(ri>=f.length)return x;dR=fR=f[ri];}else{const b=ri*2;if(b>=f.length)return x;dR=f[b];fR=f[b+1]||[];}const nd=rawDispo(x).map((d,dj)=>{if(dj<di)return d;const c=dj-di;return{debut:normT(getCell(dR,c,il,false))||d.debut,fin:normT(getCell(il?dR:fR,c,il,true))||d.fin};});return{...x,dispo:nd};}));
   };
   const onPasteCin=(e,di)=>{
     const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
@@ -323,105 +400,262 @@ function App(){
     setEff(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;return{jour:il?((jR[c*2]||"").trim()):((jR[c]||"").trim())||x.jour,soir:il?((jR[c*2+1]||"").trim()):((sR[c]||"").trim())||x.soir};}));
   };
 
-  const calcEffDi=(newDays,di,ouvH,ei,debut,fin)=>{
-    const thr=ouvH+params.jourDecalage;let jour=0,soir=0;
-    emps.forEach((row,i)=>{
-      if(isBlocked(row.particularite))return;
-      const d=i===ei?toH(debut):toH(newDays[i][di].debut);
-      const f=i===ei?toH(fin):toH(newDays[i][di].fin);
-      if(d!==null){if(d<thr)jour+=1;else if(d<params.jourLimite)jour+=params.jourPoids;}
-      if(f!==null){if(f>=params.soirDebut&&f<=params.soirLimite)soir+=params.soirPoids;else if(f>params.soirLimite)soir+=1;}
-    });
-    return{jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};
+  const focusNextDispo=(eid,di,f)=>{
+    if(f==="debut")return focusRef(rd(eid,di,"fin"));
+    if(di<6)return focusRef(rd(eid,di+1,"debut"));
+    const nx=emps[empIdx[eid]+1];if(nx)focusRef(rd(nx.id,0,"debut"));
+  };
+  const onKDDispo=(e,eid,di,f)=>{
+    const v=e.target.value;
+    if(e.key==="ArrowDown"){e.preventDefault();const nx=emps[empIdx[eid]+1];if(nx)focusRef(rd(nx.id,di,f));return;}
+    if(e.key==="ArrowUp"){e.preventDefault();const pv=emps[empIdx[eid]-1];if(pv)focusRef(rd(pv.id,di,f));return;}
+    if(e.key==="ArrowRight"){e.preventDefault();if(di<6)focusRef(rd(eid,di+1,f));return;}
+    if(e.key==="ArrowLeft"){e.preventDefault();if(di>0)focusRef(rd(eid,di-1,f));return;}
+    if(e.key==="Enter"){e.preventDefault();blurDispo(eid,di,f,v);setTimeout(()=>focusNextDispo(eid,di,f),0);return;}
+    if((e.key==="Delete"||e.key==="Backspace")&&v){e.preventDefault();updDispo(eid,di,f,"");}
   };
 
-  const assignerUnJour=(newDays,ei,di)=>{
-    const emp=emps[ei];
-    if(isBlocked(emp.particularite))return false;
-    const ch=cin[di];if(!ch.ouverture||!ch.fermeture)return false;
-    if(newDays[ei][di].debut&&newDays[ei][di].fin)return false;
-    const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture),ferEff=toH(getFerEff(ch.fermeture));
-    const d=getDispo(emp),dH=d[di].debut?toH(d[di].debut):null,fH=d[di].fin?toH(d[di].fin):null;
-    if(dH===null&&fH===null)return false;
-    const empDebut=dH!==null?dH:ouvH,empFin=fH!==null?fH:ferH;
-    let ferCin=newDays.filter((_,i)=>{const f=toH(newDays[i][di].fin);return f!==null&&f>=ferH-EPS;}).length;
-    const ouvCount=newDays.filter((_,i)=>{const d=toH(newDays[i][di].debut);return d!==null&&d<=ouvH+EPS;}).length;
+  // ── Day cache ─────────────────────────────────────────────────────────────
+  const mkDayCache=(di,newDays)=>{
+    const ch=cin[di];if(!ch.ouverture||!ch.fermeture)return null;
+    const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture);if(ouvH===null||ferH===null)return null;
+    const ferEff=toH(getFerEff(ch.fermeture));
+    const thr=ouvH+params.jourDecalage;
     const jT=parseFloat((eff[di].jour||"").replace(",","."))||0;
     const sT=parseFloat((eff[di].soir||"").replace(",","."))||0;
-    const effOK=(deb,fin)=>{
+    let ferCin=0,ouvCnt=0,jour=0,soir=0;
+    for(let i=0;i<emps.length;i++){
+      if(isBlocked(emps[i].particularite))continue;
+      const d=toH(newDays[i][di].debut),f=toH(newDays[i][di].fin);
+      if(f!==null&&f>=ferH-EPS)ferCin++;
+      if(d!==null&&d<=ouvH+EPS)ouvCnt++;
+      if(d!==null){if(d<thr)jour+=1;else if(d<params.jourLimite)jour+=params.jourPoids;}
+      if(f!==null){if(f>=params.soirDebut&&f<=params.soirLimite)soir+=params.soirPoids;else if(f>params.soirLimite)soir+=1;}
+    }
+    return{ouvH,ferH,ferEff,thr,jT,sT,
+      jourRond:jT>0&&Number.isInteger(jT),soirRond:sT>0&&Number.isInteger(sT),
+      ferCin,ouvCnt,jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};
+  };
+  const updCache=(c,debut,fin)=>{
+    const d=toH(debut),f=toH(fin);
+    if(d!==null){if(d<=c.ouvH+EPS)c.ouvCnt++;if(d<c.thr)c.jour+=1;else if(d<params.jourLimite)c.jour+=params.jourPoids;c.jour=Math.round(c.jour*10)/10;}
+    if(f!==null){if(f>=c.ferH-EPS)c.ferCin++;if(f>=params.soirDebut&&f<=params.soirLimite)c.soir+=params.soirPoids;else if(f>params.soirLimite)c.soir+=1;c.soir=Math.round(c.soir*10)/10;}
+  };
+
+  // ── Core assigner ─────────────────────────────────────────────────────────
+  const _assigner=(newDays,ei,di,cache,wt,plus=false)=>{
+    if(!cache)return false;
+    const emp=emps[ei];if(isBlocked(emp.particularite))return false;
+    if(newDays[ei][di].debut&&newDays[ei][di].fin)return false;
+    const{ouvH,ferH,ferEff,thr,jT,sT,jourRond,soirRond}=cache;
+    const disp=getDispo(emp);
+    const dH=disp[di].debut?toH(disp[di].debut):null,fH=disp[di].fin?toH(disp[di].fin):null;
+    if(dH===null&&fH===null)return false;
+    const empDebut=dH!==null?dH:ouvH,empFin=fH!==null?fH:ferH;
+    const effOK=(dv,fv)=>{
       if(!jT&&!sT)return true;
-      const{jour,soir}=calcEffDi(newDays,di,ouvH,ei,deb,fin);
-      return(!jT||jour<=jT)&&(!sT||soir<=sT);
+      let j=cache.jour,s=cache.soir;
+      if(dv!==null){if(dv<thr)j+=1;else if(dv<params.jourLimite)j+=params.jourPoids;}
+      if(fv!==null){if(fv>=params.soirDebut&&fv<=params.soirLimite)s+=params.soirPoids;else if(fv>params.soirLimite)s+=1;}
+      return(!jT||j<=jT)&&(!sT||s<=sT);
     };
     const peutOuv=empDebut<=params.genSeuilOuverture+EPS;
-    const dOuv=params.genOuvertureFlexible&&peutOuv
-      ?toStr(ouvCount>=params.genNbOuverture?ouvH+params.genDelaiApresOuverture:ouvH)
-      :toStr(Math.max(empDebut,ouvH));
-    const opts=[
-      {debut:dOuv,fin:toStr(ferH),ferCin:true,needOuv:true},
-      {debut:dOuv,fin:toStr(ferEff),ferCin:false,needOuv:true},
-      {debut:toStr(18),fin:toStr(ferH),ferCin:true,needOuv:false},
-      {debut:toStr(18),fin:toStr(ferEff),ferCin:false,needOuv:false},
-      {debut:dOuv,fin:toStr(18),ferCin:false,needOuv:true},
+    const dOuv=params.genOuvertureFlexible&&peutOuv?toStr(cache.ouvCnt>=params.genNbOuverture?ouvH+params.genDelaiApresOuverture:ouvH):toStr(Math.max(empDebut,ouvH));
+    const opts=plus?[
+      {d:dOuv,      f:toStr(ferH),   fc:true, no:true},
+      {d:dOuv,      f:toStr(ferEff), fc:false,no:true},
+      {d:toStr(14), f:toStr(ferH),   fc:true, no:false,s14:true},
+      {d:toStr(14), f:toStr(ferEff), fc:false,no:false,s14:true},
+      {d:toStr(18), f:toStr(ferH),   fc:true, no:false},
+      {d:toStr(18), f:toStr(ferEff), fc:false,no:false},
+      {d:dOuv,      f:toStr(20),     fc:false,no:true, s20:true},
+      {d:dOuv,      f:toStr(18),     fc:false,no:true},
+      {d:toStr(14), f:toStr(18),     fc:false,no:false,s14:true},
+    ]:[
+      {d:dOuv,      f:toStr(ferH),   fc:true, no:true},
+      {d:dOuv,      f:toStr(ferEff), fc:false,no:true},
+      {d:toStr(18), f:toStr(ferH),   fc:true, no:false},
+      {d:toStr(18), f:toStr(ferEff), fc:false,no:false},
+      {d:dOuv,      f:toStr(18),     fc:false,no:true},
     ];
-    for(const opt of opts){
-      if(opt.needOuv&&!peutOuv)continue;
-      const debutCheck=params.genOuvertureFlexible&&peutOuv&&opt.needOuv?ouvH:empDebut;
-      if(debutCheck>toH(opt.debut)+EPS)continue;
-      if(empFin<toH(opt.fin)-EPS)continue;
-      if(opt.ferCin&&ferCin>=params.genNbFermetureCinema)continue;
-      if(calcH(opt.debut,opt.fin)<params.genMinQuart)continue;
-      if(!effOK(opt.debut,opt.fin))continue;
-      const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
-      if(wt+calcH(opt.debut,opt.fin)>getMaxH(emp))continue;
-      newDays[ei][di]={debut:opt.debut,fin:opt.fin};
-      if(opt.ferCin)ferCin++;
-      return true;
+    for(const o of opts){
+      if(o.s14&&jourRond)continue;if(o.s20&&soirRond)continue;
+      if(o.no&&!peutOuv)continue;
+      const dv=toH(o.d),fv=toH(o.f);
+      const dc=params.genOuvertureFlexible&&peutOuv&&o.no?ouvH:empDebut;
+      if(dc>dv+EPS)continue;if(empFin<fv-EPS)continue;
+      if(o.fc&&cache.ferCin>=params.genNbFermetureCinema)continue;
+      const h=calcH(o.d,o.f);if(h<params.genMinQuart)continue;
+      if(!effOK(dv,fv))continue;
+      if(wt[ei]+h>getMaxH(emp))continue;
+      newDays[ei][di]={debut:o.d,fin:o.f};wt[ei]+=h;updCache(cache,o.d,o.f);return true;
     }
     return false;
   };
 
+  const assignerUnJour=(newDays,ei,di)=>{
+    const cache=mkDayCache(di,newDays);if(!cache)return false;
+    const wt=[];wt[ei]=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
+    return _assigner(newDays,ei,di,cache,wt,false);
+  };
+
+  // ── Attribuer tous ────────────────────────────────────────────────────────
   const genererTous=()=>{
-    const newDays=emps.map(e=>e.days.map(d=>({...d})));let assigns=0;
-    for(let ei=0;ei<emps.length;ei++){for(let di=0;di<7;di++){if(assignerUnJour(newDays,ei,di))assigns++;}}
+    const newDays=emps.map(e=>e.days.map(d=>({...d})));
+    const wt=emps.map((_,ei)=>newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0));
+    const caches=DAYS.map((_,di)=>mkDayCache(di,newDays));
+    let assigns=0;
+    for(let ei=0;ei<emps.length;ei++)for(let di=0;di<7;di++)if(_assigner(newDays,ei,di,caches[di],wt,false))assigns++;
     cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();
     showMsg(`${assigns} quart${assigns!==1?"s":""} assigné${assigns!==1?"s":""}`);setPage("horaire");
   };
 
-  const genererFermeturePrioritaire=()=>{
-    const newDays=emps.map(e=>e.days.map(d=>({...d})));let assigns=0;
+  // ── Priorité fermeture (partagé) ──────────────────────────────────────────
+  const runPrioriteFermeture=(newDays)=>{
+    let assigns=0;
     for(let di=0;di<7;di++){
       const ch=cin[di];if(!ch.ouverture||!ch.fermeture)continue;
-      const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture);
-      let dejaCouvert=false;
-      for(let ei=0;ei<emps.length;ei++){const f=toH(newDays[ei][di].fin);if(f!==null&&f>=ferH-EPS){dejaCouvert=true;break;}}
-      if(dejaCouvert)continue;
-      let prioritaire=-1;
+      const ferH=toH(ch.fermeture);
+      let covered=false;
+      for(let ei=0;ei<emps.length;ei++){const f=toH(newDays[ei][di].fin);if(f!==null&&f>=ferH-EPS){covered=true;break;}}
+      if(covered)continue;
+      let prio=-1;
       for(let ei=0;ei<emps.length;ei++){
         const emp=emps[ei];if(isBlocked(emp.particularite))continue;
         if(newDays[ei][di].debut||newDays[ei][di].fin)continue;
-        const dispo=getDispo(emp);
-        const dispFin=dispo[di].fin?toH(dispo[di].fin):null;
-        if(dispFin===null||dispFin<ferH-EPS)continue;
-        const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
+        const disp=getDispo(emp);const df=disp[di].fin?toH(disp[di].fin):null;
+        if(df===null||df<ferH-EPS)continue;
         const h=calcH("18:00",toStr(ferH));
+        const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
         if(h<params.genMinQuart||wt+h>getMaxH(emp))continue;
-        newDays[ei][di]={debut:"18:00",fin:toStr(ferH)};
-        prioritaire=ei;assigns++;break;
+        newDays[ei][di]={debut:"18:00",fin:toStr(ferH)};prio=ei;assigns++;break;
       }
-      if(prioritaire<0)continue;
+      if(prio<0)continue;
       for(let ei=emps.length-1;ei>=0;ei--){
-        if(ei===prioritaire)continue;
-        const emp=emps[ei];if(isBlocked(emp.particularite))continue;
+        if(ei===prio||isBlocked(emps[ei].particularite))continue;
         const day=newDays[ei][di];if(!day.debut||!day.fin)continue;
         if(toH(day.fin)<params.soirDebut-EPS)continue;
-        if(toH(day.debut)<18-EPS){
-          if(calcH(day.debut,"18:00")>=params.genMinQuart){newDays[ei][di]={debut:day.debut,fin:"18:00"};}
-          else{newDays[ei][di]={debut:"",fin:""};}
-        }else{newDays[ei][di]={debut:"",fin:""};}
+        if(toH(day.debut)<18-EPS){if(calcH(day.debut,"18:00")>=params.genMinQuart)newDays[ei][di]={debut:day.debut,fin:"18:00"};else newDays[ei][di]={debut:"",fin:""};}
+        else newDays[ei][di]={debut:"",fin:""};
         break;
       }
     }
+    return assigns;
+  };
+
+  // ── Attribuer ++ ──────────────────────────────────────────────────────────
+  const genererTousPlus=()=>{
+    const newDays=emps.map(e=>e.days.map(d=>({...d})));
+    const wt=emps.map((_,ei)=>newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0));
+    const caches=DAYS.map((_,di)=>mkDayCache(di,newDays));
+    let assigns=0;
+    for(let ei=0;ei<emps.length;ei++)for(let di=0;di<7;di++)if(_assigner(newDays,ei,di,caches[di],wt,true))assigns++;
+    assigns+=runPrioriteFermeture(newDays);
+    cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();
+    showMsg(`${assigns} quarts assignés`);setPage("horaire");
+  };
+
+  // ── Rééquilibrer ─────────────────────────────────────────────────────────
+  const genererRééquilibrerJour=(targetDi)=>{
+    const newDays=emps.map(e=>e.days.map(d=>({...d})));let changes=0;
+    const getEffDay=di=>{const c=mkDayCache(di,newDays);return c?{jour:c.jour,soir:c.soir}:{jour:0,soir:0};};
+    const tJ=parseFloat((eff[targetDi].jour||"").replace(",","."))||0;
+    const tS=parseFloat((eff[targetDi].soir||"").replace(",","."))||0;
+    const isUnder=()=>{const c=getEffDay(targetDi);return(tJ>0&&c.jour<tJ-EPS)||(tS>0&&c.soir<tS-EPS);};
+    const tenterRemplacement=(srcDi,excludeEi)=>{
+      const srcTJ=parseFloat((eff[srcDi].jour||"").replace(",","."))||0;
+      const srcTS=parseFloat((eff[srcDi].soir||"").replace(",","."))||0;
+      const sc0=getEffDay(srcDi);
+      if(!((srcTJ>0&&sc0.jour<srcTJ-EPS)||(srcTS>0&&sc0.soir<srcTS-EPS)))return true;
+      let anyFound=false;
+      while(true){
+        const sc=getEffDay(srcDi);
+        if(!((srcTJ>0&&sc.jour<srcTJ-EPS)||(srcTS>0&&sc.soir<srcTS-EPS)))break;
+        let found=false;
+        for(let ri=0;ri<emps.length&&!found;ri++){
+          if(ri===excludeEi||isBlocked(emps[ri].particularite))continue;
+          if(newDays[ri][srcDi].debut||newDays[ri][srcDi].fin)continue;
+          const rd2=getDispo(emps[ri]);if(!rd2[srcDi].debut&&!rd2[srcDi].fin)continue;
+          if(assignerUnJour(newDays,ri,srcDi)){found=true;anyFound=true;}
+        }
+        if(!found)break;
+      }
+      return anyFound;
+    };
+    for(let ei=0;ei<emps.length;ei++){
+      if(!isUnder())break;
+      const emp=emps[ei];if(isBlocked(emp.particularite))continue;
+      if(newDays[ei][targetDi].debut||newDays[ei][targetDi].fin)continue;
+      const dispo=getDispo(emp);if(!dispo[targetDi].debut&&!dispo[targetDi].fin)continue;
+      let moved=false;
+      // Strat 1
+      for(let srcDi=0;srcDi<7&&!moved;srcDi++){
+        if(srcDi===targetDi||!newDays[ei][srcDi].debut||!newDays[ei][srcDi].fin)continue;
+        const sv={...newDays[ei][srcDi]};newDays[ei][srcDi]={debut:"",fin:""};
+        if(assignerUnJour(newDays,ei,targetDi)){if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}}
+        else newDays[ei][srcDi]=sv;
+      }
+      // Strat 2
+      if(!moved){
+        const splitH=18;
+        for(let srcDi=0;srcDi<7&&!moved;srcDi++){
+          if(srcDi===targetDi)continue;
+          const srcDay=newDays[ei][srcDi];if(!srcDay.debut||!srcDay.fin)continue;
+          const srcDH=toH(srcDay.debut),srcFH=toH(srcDay.fin);
+          if(srcDH===null||srcDH>=params.jourLimite||srcFH===null||srcFH<=params.soirDebut)continue;
+          if(calcH(toStr(splitH),srcDay.fin)<params.genMinQuart)continue;
+          const chTgt=cin[targetDi];if(!chTgt.ouverture||!chTgt.fermeture)continue;
+          const ouvTgt=toH(chTgt.ouverture);
+          const dTgt=dispo[targetDi].debut?toH(dispo[targetDi].debut):null;
+          const fTgt=dispo[targetDi].fin?toH(dispo[targetDi].fin):null;
+          const jD=Math.max(dTgt!==null?dTgt:ouvTgt,ouvTgt);
+          const jF=Math.min(fTgt!==null?fTgt:toH(chTgt.fermeture),splitH);
+          if(jF-jD<params.genMinQuart)continue;
+          const wtEi=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
+          if(wtEi-calcH(srcDay.debut,srcDay.fin)+calcH(toStr(splitH),srcDay.fin)+(jF-jD)>getMaxH(emp))continue;
+          const sv={...srcDay};
+          newDays[ei][srcDi]={debut:toStr(splitH),fin:srcDay.fin};
+          newDays[ei][targetDi]={debut:toStr(jD),fin:toStr(jF)};
+          if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}
+          else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}
+        }
+      }
+      // Strat 3
+      if(!moved){
+        const splitH=18;
+        const tS2=parseFloat((eff[targetDi].soir||"").replace(",","."))||0;
+        if(tS2>0&&getEffDay(targetDi).soir<tS2-EPS){
+          const fTgt=dispo[targetDi].fin?toH(dispo[targetDi].fin):null;
+          const chTgt=cin[targetDi];
+          if(chTgt.ouverture&&chTgt.fermeture){
+            const ferTgt=toH(chTgt.fermeture);
+            if((fTgt!==null?fTgt:ferTgt)>=ferTgt-EPS){
+              for(let srcDi=0;srcDi<7&&!moved;srcDi++){
+                if(srcDi===targetDi)continue;
+                const srcDay=newDays[ei][srcDi];if(!srcDay.debut||!srcDay.fin)continue;
+                const srcFH=toH(srcDay.fin);if(srcFH===null||srcFH>splitH+EPS)continue;
+                const soirFin=(toH(getFerEff(chTgt.fermeture))??ferTgt);
+                if(soirFin-splitH<params.genMinQuart)continue;
+                const wtEi=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
+                if(wtEi-calcH(srcDay.debut,srcDay.fin)+(soirFin-splitH)>getMaxH(emp))continue;
+                const sv={...srcDay};newDays[ei][srcDi]={debut:"",fin:""};
+                newDays[ei][targetDi]={debut:toStr(splitH),fin:toStr(soirFin)};
+                if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}
+                else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}
+              }
+            }
+          }
+        }
+      }
+    }
+    cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();
+    setShowReequMenu(false);setPage("horaire");
+    showMsg(changes>0?`${changes} déplacement${changes!==1?"s":""} effectué${changes!==1?"s":""}`:"Aucun rééquilibrage possible");
+  };
+
+  const genererFermeturePrioritaire=()=>{
+    const newDays=emps.map(e=>e.days.map(d=>({...d})));
+    const assigns=runPrioriteFermeture(newDays);
     cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();
     showMsg(`${assigns} fermeture${assigns!==1?"s":""} assignée${assigns!==1?"s":""}`);setPage("horaire");
   };
@@ -434,25 +668,27 @@ function App(){
       const jT=parseFloat((eff[di].jour||"").replace(",","."))||0;
       const sT=parseFloat((eff[di].soir||"").replace(",","."))||0;
       const target=sens==="debut"?jT:sT;if(!target)continue;
+      if(sens==="debut"&&jT>0&&Number.isInteger(jT))continue;
+      if(sens==="fin"&&sT>0&&Number.isInteger(sT))continue;
       const getCur=()=>{
         const thr=ouvH+params.jourDecalage;let jour=0,soir=0;
-        emps.forEach((row,i)=>{
-          if(isBlocked(row.particularite))return;
+        for(let i=0;i<emps.length;i++){
+          if(isBlocked(emps[i].particularite))continue;
           const d=toH(newDays[i][di].debut),f=toH(newDays[i][di].fin);
           if(d!==null){if(d<thr)jour+=1;else if(d<params.jourLimite)jour+=params.jourPoids;}
           if(f!==null){if(f>=params.soirDebut&&f<=params.soirLimite)soir+=params.soirPoids;else if(f>params.soirLimite)soir+=1;}
-        });
+        }
         return{jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};
       };
       if((sens==="debut"?getCur().jour:getCur().soir)>=target-EPS)continue;
       for(let ei=0;ei<emps.length;ei++){
         const emp=emps[ei];if(isBlocked(emp.particularite))continue;
         const day=newDays[ei][di];if(!day.debut||!day.fin)continue;
-        const dispo=getDispo(emp);
-        const dH=dispo[di].debut?toH(dispo[di].debut):null,fH=dispo[di].fin?toH(dispo[di].fin):null;
+        const disp=getDispo(emp);
+        const dH=disp[di].debut?toH(disp[di].debut):null,fH=disp[di].fin?toH(disp[di].fin):null;
         const empDebut=dH!==null?dH:ouvH,empFin=fH!==null?fH:ferH;
-        const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
         const oldH=calcH(day.debut,day.fin);
+        const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
         if(sens==="debut"){
           if(toH(day.debut)<=heure+EPS||empDebut>heure+EPS)continue;
           if(wt-oldH+calcH(toStr(heure),day.fin)>getMaxH(emp))continue;
@@ -469,56 +705,39 @@ function App(){
     showMsg(`${assigns} quart${assigns!==1?"s":""} modifié${assigns!==1?"s":""}`);setPage("horaire");
   };
 
-  const buildCandidats=(newDays,di,ouvH,ferH,finCible)=>{
-    const cands=[];
-    for(let ei=0;ei<emps.length;ei++){
-      const emp=emps[ei];if(isBlocked(emp.particularite))continue;
-      if(!params.genEcraser&&newDays[ei][di].debut&&newDays[ei][di].fin)continue;
-      const d=getDispo(emp),dH=d[di].debut?toH(d[di].debut):null,fH=d[di].fin?toH(d[di].fin):null;
-      if(dH===null&&fH===null)continue;
-      const empDebut=dH!==null?dH:ouvH,empFin=fH!==null?fH:ferH;
-      if(empFin<finCible-EPS)continue;
-      const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
-      const ma=getMaxH(emp);if(wt>=ma)continue;
-      cands.push([ei,empFin-empDebut,wt,ma,empFin,empFin>=ferH-EPS?1:0,empDebut<=params.genSeuilOuverture+EPS?1:0,empDebut]);
-    }
-    cands.sort((a,b)=>(a[0]-b[0])||(b[5]-a[5])||(b[6]-a[6])||(b[4]-a[4]));
-    return cands;
-  };
-  const genererGroupe=key=>{
+  const genererQuart4h=(type)=>{
+    const debut=type==="jour"?"14:00":"18:00";
+    const fin=type==="jour"?"18:00":"22:00";
+    const dV=toH(debut),fV=toH(fin);
     const newDays=emps.map(e=>e.days.map(d=>({...d})));let assigns=0;
     for(let di=0;di<7;di++){
-      const ch=cin[di];if(!ch.ouverture||!ch.fermeture)continue;
-      const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture),ferEff=toH(getFerEff(ch.fermeture));
-      const debutCible=key.startsWith("ouv")?ouvH:parseFloat(key.split("-")[0]);
-      const finKey=key.split("-").slice(1).join("-");
-      const finCible=finKey==="ferH"?ferH:finKey==="ferEff"?ferEff:parseFloat(finKey);
-      let ferCin=newDays.filter((_,ei)=>{const f=toH(newDays[ei][di].fin);return f!==null&&f>=ferH-EPS;}).length;
-      let ouvCount=newDays.filter((_,ei)=>{const d=toH(newDays[ei][di].debut);return d!==null&&d<=ouvH+EPS;}).length;
-      const assigned=new Set(newDays.map((_,ei)=>newDays[ei][di].debut&&newDays[ei][di].fin?ei:-1).filter(x=>x>=0));
-      if(finCible>=ferH-EPS&&ferCin>=params.genNbFermetureCinema)continue;
-      const startsAtOuv=Math.abs(debutCible-ouvH)<EPS;
-      const cands=buildCandidats(newDays,di,ouvH,ferH,finCible)
-        .filter(([ei])=>!assigned.has(ei))
-        .filter(([ei])=>{if(finCible<ferH-EPS)return true;const d=getDispo(emps[ei]);return d[di].fin&&toH(d[di].fin)>=ferH-EPS;});
-      let ceJour=0;
-      for(const[ei,,wt,ma,,,, empDebut]of cands){
-        if(finCible>=ferH-EPS&&ceJour>=params.genNbFermetureCinema)break;
-        const elig=empDebut<=params.genSeuilOuverture+EPS;
-        const debutReel=startsAtOuv?(params.genOuvertureFlexible&&elig?(ouvCount>=params.genNbOuverture?ouvH+params.genDelaiApresOuverture:ouvH):Math.max(empDebut,ouvCount>=params.genNbOuverture?ouvH+params.genDelaiApresOuverture:ouvH)):debutCible;
-        if(startsAtOuv&&elig&&debutReel<=ouvH+EPS&&ouvCount>=params.genNbOuverture)continue;
-        const debut=toStr(debutReel);
-        const fin=toStr(finCible>ferEff+EPS&&ferCin>=params.genNbFermetureCinema?ferEff:finCible);
-        const h=calcH(debut,fin);if(h<params.genMinQuart||wt+h>ma)continue;
-        newDays[ei][di]={debut,fin};assigned.add(ei);
-        if(toH(fin)>=ferH-EPS)ferCin++;if(debutReel<=ouvH+EPS)ouvCount++;
-        assigns++;ceJour++;
+      const c=mkDayCache(di,newDays);if(!c)continue;
+      const{jT,sT}=c;
+      const atCapacity=()=>{
+        if(!jT&&!sT)return false;
+        let j=c.jour,s=c.soir;
+        if(dV!==null){if(dV<c.thr)j+=1;else if(dV<params.jourLimite)j+=params.jourPoids;}
+        if(fV!==null){if(fV>=params.soirDebut&&fV<=params.soirLimite)s+=params.soirPoids;else if(fV>params.soirLimite)s+=1;}
+        return(jT>0&&j>jT+EPS)||(sT>0&&s>sT+EPS);
+      };
+      for(let ei=0;ei<emps.length;ei++){
+        if(atCapacity())break;
+        const emp=emps[ei];if(isBlocked(emp.particularite))continue;
+        if(newDays[ei][di].debut||newDays[ei][di].fin)continue;
+        const disp=getDispo(emp);
+        const dH=disp[di].debut?toH(disp[di].debut):null,fH=disp[di].fin?toH(disp[di].fin):null;
+        if(dH===null&&fH===null)continue;
+        if(dH!==null&&dH>dV+EPS)continue;if(fH!==null&&fH<fV-EPS)continue;
+        const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
+        if(wt+4>getMaxH(emp))continue;
+        newDays[ei][di]={debut,fin};updCache(c,debut,fin);assigns++;
       }
     }
-    cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();
-    showMsg(`${assigns} quart${assigns!==1?"s":""} assigné${assigns!==1?"s":""}`);setPage("horaire");
+    if(assigns>0){cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();showMsg(`${assigns} quart${assigns!==1?"s":""} 4h assigné${assigns!==1?"s":""}`);}
+    else showMsg("Aucun quart 4h possible");
   };
 
+  // ── Render helpers ────────────────────────────────────────────────────────
   const TotalCell=({id})=>{
     const tot=rowTotals[id],row=emps[empIdx[id]];
     const maxH=row&&row.particularite==="Max heures"&&row.maxH?parseFloat(row.maxH):null;
@@ -526,129 +745,105 @@ function App(){
     return(<td style={{textAlign:"center",verticalAlign:"middle",padding:"10px 8px"}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,minHeight:36}}><span style={{fontSize:14,fontWeight:800,visibility:tot>0?"visible":"hidden",color:tc}}>{fmtH(tot)||"0"}</span><div style={{width:36,height:3,borderRadius:2,background:"#d1d5db",overflow:"hidden"}}><div style={{width:`${Math.min(100,(tot/(maxH||40))*100)}%`,height:"100%",background:tc,borderRadius:2}}/></div></div></td>);
   };
   const DeleteCell=({id})=>(<td style={{textAlign:"center",verticalAlign:"middle",padding:"0 6px"}}><button onClick={()=>remEmp(id)} style={{background:"none",border:"none",cursor:"pointer",color:"#c8cdd8",fontSize:14,padding:4}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#c8cdd8"}>×</button></td>);
+  const rstS=act=>({border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,width:"100%",textAlign:"left",background:act?"#fef2f2":"#fff",color:act?"#dc2626":"#475569",transition:"background .15s"});
+  const defBadge=di=>{
+    const d=deficits[di];if(!d.hasDeficit)return <span style={{fontSize:10,color:"#16a34a",fontWeight:700}}>✓</span>;
+    const pts=[];if(d.jour>EPS)pts.push(`-${d.jour.toString().replace(".",sep)}j`);if(d.soir>EPS)pts.push(`-${d.soir.toString().replace(".",sep)}s`);
+    return <span style={{fontSize:10,color:"#dc2626",fontWeight:700}}>{pts.join(" ")}</span>;
+  };
+  const stickyProps={cin,eff,effCalcs,wd,params,cfk,setCfk,cinRefs,updCin,blurCin,onCinKD,onPasteCin,setEv,onPasteEff,sep};
 
-  const StickyHeader=()=>(
-    <div style={{position:"sticky",top:0,zIndex:20,background:"#fff",boxShadow:"0 2px 6px rgba(0,0,0,.12)"}}>
-      <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/>
-        <tbody>
-          <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
-            <td style={{padding:"5px 8px 5px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>HEURES D'OUVERTURE</td><td/>
-            {cin.map((ch,di)=>{const kO=ck(di,"ouverture"),kF=ck(di,"fermeture");return(
-              <td key={di} style={{padding:0,textAlign:"center",verticalAlign:"middle",...blS(di)}}>
-                <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3}}>
-                  <input type="text" value={ch.ouverture} ref={el=>cinRefs.current[kO]=el} onChange={e=>updCin(di,"ouverture",e.target.value)} onBlur={e=>{blurCin(di,"ouverture",e.target.value);setCfk(null);}} onFocus={()=>setCfk(kO)} onClick={e=>e.target.select()} onKeyDown={e=>onCinKD(e,di,"ouverture")} onPaste={e=>onPasteCin(e,di)} maxLength={5} autoComplete="off" style={cinS("#dbeafe",cfk===kO)}/>
-                  <div style={{width:16,height:1,background:"#e2e8f0"}}/>
-                  <input type="text" value={ch.fermeture} ref={el=>cinRefs.current[kF]=el} onChange={e=>updCin(di,"fermeture",e.target.value)} onBlur={e=>{blurCin(di,"fermeture",e.target.value);setCfk(null);}} onFocus={()=>setCfk(kF)} onClick={e=>e.target.select()} onKeyDown={e=>onCinKD(e,di,"fermeture")} onPaste={e=>onPasteCin(e,di)} maxLength={5} autoComplete="off" style={cinS("#fff3e0",cfk===kF)}/>
-                </div>
-              </td>);})}
-            <td/><td/>
-          </tr>
-          <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
-            <td style={{padding:"5px 8px 5px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>EFFECTIFS</td><td/>
-            {eff.map((ef,di)=>{
-              const{jour:cj,soir:cs}=effCalcs[di];
-              const mj=parseFloat((ef.jour||"").replace(",","."))||0,ms=parseFloat((ef.soir||"").replace(",","."))||0;
-              return(<td key={di} style={{padding:0,textAlign:"center",verticalAlign:"middle",...blS(di)}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-                  {[{f:"jour",cv:cj,mn:mj},{f:"soir",cv:cs,mn:ms}].map(({f,cv,mn},fi)=>{
-                    const exact=mn>0&&eqEff(cv,mn),close=!exact&&mn>0&&params.tolEffOn&&params.tolEff>0&&Math.abs(cv-mn)<=params.tolEff&&cv>0,below=mn>0&&!exact&&!close&&cv<mn,above=mn>0&&!exact&&cv>mn;
-                    return(<span key={f} style={{display:"flex",alignItems:"center",gap:4}}>
-                      {fi>0&&<div style={{width:1,height:36,background:"#e2e8f0"}}/>}
-                      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                        <span style={{fontSize:9,fontWeight:600,color:"#94a3b8",letterSpacing:"0.4px"}}>{f.toUpperCase()}</span>
-                        <input type="text" value={ef[f]} onChange={e=>setEv(di,f,e.target.value)} maxLength={5} autoComplete="off" style={effS(exact,close,below,above)} placeholder="—" onPaste={e=>onPasteEff(e,di)}/>
-                        <span style={{fontSize:9,fontWeight:700,color:mn===0?"#94a3b8":cv>=mn?"#16a34a":"#dc2626"}}>{cv>0?cv.toString().replace(".",sep):"—"}</span>
-                      </div>
-                    </span>);
-                  })}
-                </div>
-              </td>);})}
-            <td/><td/>
-          </tr>
-          <tr style={{borderBottom:"2px solid #c8cdd8",background:"#f8fafc",height:26}}>
-            <td style={TH({textAlign:"left",paddingLeft:18})}>ÉQUIPIER</td>
-            <td style={TH({borderLeft:"1px solid #c8cdd8"})}>PARTICULARITÉ</td>
-            {DS.map((d,i)=>(<td key={d} style={TH({borderLeft:"1px solid #c8cdd8",borderRight:i===6?"1px solid #c8cdd8":undefined})}><div style={{color:"#475569"}}>{d}</div><div style={{fontWeight:500,fontSize:10,color:"#64748b",marginTop:1}}>{fmt(wd[i],true)}</div></td>))}
-            <td style={TH({color:"#0f172a"})}>TOTAL</td><td style={TH()}/>
-          </tr>
-        </tbody>
-      </table>
+  const PanelLeft=(
+    <div style={{position:"sticky",top:24,zIndex:100,width:158,background:"#fff",boxShadow:"0 4px 20px rgba(0,0,0,.18)",border:"1.5px solid #e2e8f0",display:"flex",flexDirection:"column",overflow:"hidden",flexShrink:0}}>
+      <PanelSection label="SEMAINE" first/>
+      <div style={{padding:"8px 10px",borderBottom:"1px solid #f1f5f9",display:"flex",flexDirection:"column",gap:6}}>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"6px 0"}}>
+          <div style={{fontSize:9,color:"#94a3b8",fontWeight:600,letterSpacing:"0.5px",textTransform:"uppercase"}}>Total semaine</div>
+          <div style={{fontSize:18,fontWeight:800,color:"#0f172a",marginTop:2}}>{fmtH(grand)||"0"}</div>
+        </div>
+        <div style={{height:1,background:"#f1f5f9"}}/>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"6px 0"}}>
+          <div style={{fontSize:9,color:"#94a3b8",fontWeight:600,letterSpacing:"0.5px",textTransform:"uppercase"}}>Moy. / équipier</div>
+          <div style={{fontSize:18,fontWeight:800,color:"#2563eb",marginTop:2}}>{emps.length?(fmtH(grand/emps.length)||"0"):"—"}</div>
+        </div>
+      </div>
+      <PanelSection label="NAVIGATION"/>
+      {[{id:"horaire",label:"📅 Horaire"},{id:"dispo",label:"📋 Dispos"},{id:"params",label:"⚙️ Params"}].map(({id,label})=>(
+        <button key={id} onClick={()=>setPage(id)} style={{border:"none",borderBottom:"1px solid #f1f5f9",padding:"10px 10px",cursor:"pointer",fontSize:11,fontWeight:600,textAlign:"left",background:page===id?"#1e293b":"#fff",color:page===id?"#fff":"#475569",width:"100%"}} onMouseEnter={e=>e.currentTarget.style.background=page===id?"#1e293b":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=page===id?"#1e293b":"#fff"}>{label}</button>
+      ))}
+      <PanelSection label="SEMAINE"/>
+      <div style={{padding:"6px 10px 8px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <button onClick={()=>setWs(d=>addD(d,-7))} style={{background:"none",border:"1.5px solid #e2e8f0",cursor:"pointer",fontSize:14,color:"#64748b",padding:"4px 8px",lineHeight:1,borderRadius:3}}>‹</button>
+        <div style={{textAlign:"center"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#0f172a"}}>Sem. {iw}</div>
+          <div style={{fontSize:9,color:"#94a3b8",marginTop:2}}>{fmt(ws,true)}</div>
+        </div>
+        <button onClick={()=>setWs(d=>addD(d,7))} style={{background:"none",border:"1.5px solid #e2e8f0",cursor:"pointer",fontSize:14,color:"#64748b",padding:"4px 8px",lineHeight:1,borderRadius:3}}>›</button>
+      </div>
+      {savedOk!==null&&<div style={{padding:"4px 10px",borderTop:"1px solid #f1f5f9",textAlign:"center",fontSize:10,color:savedOk?"#86efac":"#fca5a5"}}>{savedOk?"💾 Sauvegarde active":"⚠️ Sauvegarde indisponible"}</div>}
     </div>
   );
 
-  const tabS=a=>({background:a?"#1e293b":"#fff",color:a?"#fff":"#64748b",border:"1.5px solid #e2e8f0",borderRadius:0,padding:"6px 14px",cursor:"pointer",fontSize:12,fontWeight:600});
-  const resetBtnS=(active)=>({border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,width:"100%",textAlign:"left",background:active?"#fef2f2":"#fff",color:active?"#dc2626":"#475569",transition:"background .15s"});
+  const PanelRight=(
+    <div style={{position:"sticky",top:24,zIndex:100,width:158,background:"#fff",boxShadow:"0 4px 20px rgba(0,0,0,.18)",border:"1.5px solid #e2e8f0",display:"flex",flexDirection:"column",overflow:"hidden",flexShrink:0}}>
+      <PanelSection label="ATTRIBUTION" first/>
+      <PanelBtn onClick={genererTous} green><span style={{fontSize:11,fontWeight:700}}>⚡⚡ Attribuer tous</span></PanelBtn>
+      <PanelBtn onClick={genererTousPlus} blue><span style={{fontSize:11,fontWeight:700}}>⚡⚡ Attribuer ++</span></PanelBtn>
+      <button onClick={()=>setShowReequMenu(v=>!v)} style={{border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,color:"#475569",background:showReequMenu?"#f1f5f9":"#fff",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=showReequMenu?"#f1f5f9":"#fff"}>
+        <span>⚖️ Rééquilibrer</span><span style={{fontSize:9,color:"#94a3b8"}}>{showReequMenu?"▲":"▼"}</span>
+      </button>
+      {showReequMenu&&(
+        <div style={{borderBottom:"1px solid #e2e8f0"}}>
+          {DS.map((_,di)=>(
+            <button key={di} onClick={()=>genererRééquilibrerJour(di)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",border:"none",borderBottom:"1px solid #f8fafc",padding:"6px 14px 6px 18px",cursor:"pointer",background:"#fafafa",fontSize:11,fontWeight:600}} onMouseEnter={e=>e.currentTarget.style.background="#e0f0e8"} onMouseLeave={e=>e.currentTarget.style.background="#fafafa"}>
+              <span style={{color:"#475569"}}>{DS[di]}</span>{defBadge(di)}
+            </button>
+          ))}
+        </div>
+      )}
+      <PanelBtn onClick={genererFermeturePrioritaire}>🔒 Priorité fermeture</PanelBtn>
+      <PanelSection label="AJUSTEMENTS"/>
+      <div style={{padding:"6px 8px 2px"}}>
+        <div style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.4px",marginBottom:4}}>JOUR — avancer début</div>
+        <div style={{display:"flex",gap:4,marginBottom:8}}>
+          <SmallBtn onClick={()=>genererEtirer(14,"debut")} label="14h"/>
+          <SmallBtn onClick={()=>genererEtirer(16,"debut")} label="16h"/>
+        </div>
+        <div style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.4px",marginBottom:4}}>SOIR — prolonger fin</div>
+        <div style={{display:"flex",gap:4,marginBottom:6}}>
+          <SmallBtn onClick={()=>genererEtirer(20,"fin")} label="20h"/>
+          <SmallBtn onClick={()=>genererEtirer(22,"fin")} label="22h"/>
+        </div>
+      </div>
+      <PanelSection label="QUARTS 4H"/>
+      <div style={{display:"flex",gap:4,padding:"6px 8px"}}>
+        <SmallBtn onClick={()=>genererQuart4h("jour")} label="☀️ 14–18h"/>
+        <SmallBtn onClick={()=>genererQuart4h("soir")} label="🌙 18–22h"/>
+      </div>
+      <PanelSection label="DONNÉES"/>
+      <PanelBtn onClick={loadTestData}>🧪 Test</PanelBtn>
+      <PanelBtn onClick={()=>importRef.current.click()}>📥 Importer</PanelBtn>
+      <PanelSection label="HISTORIQUE"/>
+      <div style={{display:"flex",borderBottom:"1px solid #f1f5f9"}}>
+        <button onClick={undo} style={{flex:1,border:"none",borderRight:"1px solid #f1f5f9",padding:"9px 0",cursor:"pointer",fontSize:16,background:"#fff",color:"#475569"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>↩</button>
+        <button onClick={redo} style={{flex:1,border:"none",padding:"9px 0",cursor:"pointer",fontSize:16,background:"#fff",color:"#475569"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>↪</button>
+      </div>
+      <PanelSection label="RÉINITIALISER"/>
+      <button onClick={effacerHoraire} style={rstS(confirmHoraire)} onMouseEnter={e=>e.currentTarget.style.background=confirmHoraire?"#fee2e2":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=confirmHoraire?"#fef2f2":"#fff"}>{confirmHoraire?"⚠️ Confirmer?":"🗑 Effacer horaire"}</button>
+      <button onClick={effacerDispos} style={rstS(confirmDispo)} onMouseEnter={e=>e.currentTarget.style.background=confirmDispo?"#fee2e2":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=confirmDispo?"#fef2f2":"#fff"}>{confirmDispo?"⚠️ Confirmer?":"🗑 Effacer dispos"}</button>
+    </div>
+  );
 
   return(
-    <div style={{fontFamily:"'Inter','Segoe UI',sans-serif",background:"#5a6080",minHeight:"100vh",padding:"24px 12px"}}>
+    <div style={{fontFamily:"'Inter','Segoe UI',sans-serif",background:"#5a6080",minHeight:"100vh",padding:"24px 12px",display:"flex",justifyContent:"center",gap:12,alignItems:"flex-start"}}>
       <input ref={importRef} type="file" accept=".pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])handleImport(e.target.files[0]);e.target.value="";}}/>
-
-      {/* Panel fixe droite */}
-      <div style={{position:"fixed",right:16,top:80,zIndex:1000,width:148,background:"#fff",boxShadow:"0 4px 20px rgba(0,0,0,.18)",border:"1.5px solid #e2e8f0",display:"flex",flexDirection:"column",overflow:"hidden"}}>
-        <PanelSection label="ATTRIBUTION" first/>
-        <PanelBtn onClick={genererTous} green>
-          <span style={{fontSize:11,fontWeight:700}}>⚡⚡ Attribuer tous</span>
-        </PanelBtn>
-        <PanelBtn onClick={genererFermeturePrioritaire}>🔒 Priorité fermeture</PanelBtn>
-        <PanelSection label="AJUSTEMENTS"/>
-        <div style={{padding:"6px 8px 2px"}}>
-          <div style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.4px",marginBottom:4}}>JOUR — avancer début</div>
-          <div style={{display:"flex",gap:4,marginBottom:8}}>
-            <SmallBtn onClick={()=>genererEtirer(14,"debut")} label="14h"/>
-            <SmallBtn onClick={()=>genererEtirer(16,"debut")} label="16h"/>
-          </div>
-          <div style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.4px",marginBottom:4}}>SOIR — prolonger fin</div>
-          <div style={{display:"flex",gap:4,marginBottom:6}}>
-            <SmallBtn onClick={()=>genererEtirer(20,"fin")} label="20h"/>
-            <SmallBtn onClick={()=>genererEtirer(22,"fin")} label="22h"/>
-          </div>
-        </div>
-        <PanelSection label="DONNÉES"/>
-        <PanelBtn onClick={loadTestData}>🧪 Test</PanelBtn>
-        <PanelBtn onClick={()=>importRef.current.click()}>📥 Importer</PanelBtn>
-        <PanelSection label="HISTORIQUE"/>
-        <div style={{display:"flex",borderBottom:"1px solid #f1f5f9"}}>
-          <button onClick={undo} style={{flex:1,border:"none",borderRight:"1px solid #f1f5f9",padding:"9px 0",cursor:"pointer",fontSize:16,background:"#fff",color:"#475569"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>↩</button>
-          <button onClick={redo} style={{flex:1,border:"none",padding:"9px 0",cursor:"pointer",fontSize:16,background:"#fff",color:"#475569"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>↪</button>
-        </div>
-        <PanelSection label="RÉINITIALISER"/>
-        <button onClick={effacerHoraire} style={resetBtnS(confirmHoraire)} onMouseEnter={e=>e.currentTarget.style.background=confirmHoraire?"#fee2e2":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=confirmHoraire?"#fef2f2":"#fff"}>
-          {confirmHoraire?"⚠️ Confirmer?":"🗑 Effacer horaire"}
-        </button>
-        <button onClick={effacerDispos} style={resetBtnS(confirmDispo)} onMouseEnter={e=>e.currentTarget.style.background=confirmDispo?"#fee2e2":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=confirmDispo?"#fef2f2":"#fff"}>
-          {confirmDispo?"⚠️ Confirmer?":"🗑 Effacer dispos"}
-        </button>
-      </div>
 
       {genMsg&&<div style={{position:"fixed",bottom:24,right:16,zIndex:2000,padding:"10px 16px",background:"#dcfce7",border:"1.5px solid #16a34a",fontSize:12,fontWeight:600,color:"#15803d",borderRadius:6,boxShadow:"0 4px 12px rgba(0,0,0,.15)"}}>{genMsg}</div>}
       {importMsg&&<div style={{position:"fixed",bottom:genMsg?72:24,right:16,zIndex:2000,padding:"10px 16px",background:"#dbeafe",border:"1.5px solid #3b82f6",fontSize:12,fontWeight:600,color:"#1d4ed8",borderRadius:6,boxShadow:"0 4px 12px rgba(0,0,0,.15)"}}>{importMsg}</div>}
 
-      <div style={{margin:"0 auto",maxWidth:TW}}>
-        <div style={{display:"flex",alignItems:"stretch",justifyContent:"space-between",marginBottom:12,flexWrap:"nowrap",gap:6,height:44}}>
-          <div style={{display:"flex",alignItems:"center",paddingRight:6}}>
-            <h1 style={{margin:0,fontSize:24,fontWeight:800,color:"#fff",fontFamily:"Georgia,serif",letterSpacing:"-0.5px",lineHeight:1,whiteSpace:"nowrap"}}>Horaire</h1>
-            {savedOk!==null&&<span style={{marginLeft:8,fontSize:10,color:savedOk?"#86efac":"#fca5a5"}} title={savedOk?"Sauvegarde active":"Sauvegarde indisponible"}>{savedOk?"💾":"⚠️"}</span>}
-          </div>
-          <div style={{display:"flex",alignItems:"center",background:"#fff",border:"1.5px solid #e2e8f0",overflow:"hidden"}}>
-            <button onClick={()=>setWs(d=>addD(d,-7))} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#64748b",padding:"6px 10px",lineHeight:1}}>‹</button>
-            <div style={{padding:"0 14px",borderLeft:"1px solid #f1f5f9",borderRight:"1px solid #f1f5f9",minWidth:260,textAlign:"center"}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-                <span style={{fontSize:14,fontWeight:800,color:"#0f172a"}}>{wl}</span>
-                <span style={{fontSize:14,fontWeight:800,color:"#94a3b8",whiteSpace:"nowrap"}}>· Sem. {iw}</span>
-              </div>
-            </div>
-            <button onClick={()=>setWs(d=>addD(d,7))} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#64748b",padding:"6px 10px",lineHeight:1}}>›</button>
-          </div>
-          <div style={{display:"flex",gap:4,alignItems:"stretch"}}>
-            <Pill label="Total semaine" value={fmtH(grand)||"0"} color="#0f172a"/>
-            <Pill label="Moy. / équipier" value={emps.length?(fmtH(grand/emps.length)||"0"):"—"} color="#2563eb"/>
-            <div style={{display:"flex",overflow:"hidden",border:"1.5px solid #e2e8f0"}}>
-              <button onClick={()=>setPage("horaire")} style={tabS(page==="horaire")}>📅 Horaire</button>
-              <button onClick={()=>setPage("dispo")} style={tabS(page==="dispo")}>📋 Dispos</button>
-              <button onClick={()=>setPage("params")} style={tabS(page==="params")}>⚙️ Params</button>
-            </div>
-          </div>
-        </div>
+      {PanelLeft}
+
+      <div style={{width:TW}}>
 
         {page==="params"&&(
           <div style={{background:"#fff",boxShadow:"0 1px 6px rgba(0,0,0,.1)",padding:"32px"}}>
@@ -669,30 +864,26 @@ function App(){
               <ParamRow label="Délai après quota ouverture" value={params.genDelaiApresOuverture} onChange={v=>setP("genDelaiApresOuverture",v)} unit="h" step="0.25"/>
               <ParamRow label="Éligible ouverture si dispo commence avant" value={params.genSeuilOuverture} onChange={v=>setP("genSeuilOuverture",v)} unit="h" step="0.5"/>
               <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
-                <div style={{flex:1,paddingRight:16}}>
-                  <div style={{fontSize:12,color:"#475569",fontWeight:500}}>Démarrer le quart à l'heure d'ouverture</div>
-                  <div style={{fontSize:10,color:"#94a3b8",marginTop:3,lineHeight:1.5}}>Si la dispo d'un équipier commence avant le seuil, son quart part de l'ouverture même si sa dispo commence après</div>
-                </div>
-                <div style={{display:"flex",gap:8,flexShrink:0}}>
-                  <ToggleBtn val={true} cur={params.genOuvertureFlexible} onClick={v=>setP("genOuvertureFlexible",v)} label="Activé"/>
-                  <ToggleBtn val={false} cur={params.genOuvertureFlexible} onClick={v=>setP("genOuvertureFlexible",v)} label="Désactivé"/>
-                </div>
+                <div style={{flex:1,paddingRight:16}}><div style={{fontSize:12,color:"#475569",fontWeight:500}}>Démarrer le quart à l'heure d'ouverture</div><div style={{fontSize:10,color:"#94a3b8",marginTop:3,lineHeight:1.5}}>Si la dispo d'un équipier commence avant le seuil, son quart part de l'ouverture même si sa dispo commence après</div></div>
+                <div style={{display:"flex",gap:8,flexShrink:0}}><ToggleBtn val={true} cur={params.genOuvertureFlexible} onClick={v=>setP("genOuvertureFlexible",v)} label="Activé"/><ToggleBtn val={false} cur={params.genOuvertureFlexible} onClick={v=>setP("genOuvertureFlexible",v)} label="Désactivé"/></div>
               </div>
               <ParamRow label="Nb fermetures cinéma" value={params.genNbFermetureCinema} onChange={v=>setP("genNbFermetureCinema",v)} unit="pers" step="1"/>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                <span style={{fontSize:12,color:"#475569"}}>Écraser les quarts existants</span>
-                <div style={{display:"flex",gap:8}}><ToggleBtn val={true} cur={params.genEcraser} onClick={v=>setP("genEcraser",v)} label="Oui"/><ToggleBtn val={false} cur={params.genEcraser} onClick={v=>setP("genEcraser",v)} label="Non"/></div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:params.genFermetureComptoir?16:0}}>
-                <div style={{fontSize:12,color:"#475569",fontWeight:500}}>Fermeture comptoir</div>
-                <div style={{display:"flex",gap:8}}><ToggleBtn val={true} cur={params.genFermetureComptoir} onClick={v=>setP("genFermetureComptoir",v)} label="Activé"/><ToggleBtn val={false} cur={params.genFermetureComptoir} onClick={v=>setP("genFermetureComptoir",v)} label="Désactivé"/></div>
-              </div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}><span style={{fontSize:12,color:"#475569"}}>Écraser les quarts existants</span><div style={{display:"flex",gap:8}}><ToggleBtn val={true} cur={params.genEcraser} onClick={v=>setP("genEcraser",v)} label="Oui"/><ToggleBtn val={false} cur={params.genEcraser} onClick={v=>setP("genEcraser",v)} label="Non"/></div></div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:params.genFermetureComptoir?16:0}}><div style={{fontSize:12,color:"#475569",fontWeight:500}}>Fermeture comptoir</div><div style={{display:"flex",gap:8}}><ToggleBtn val={true} cur={params.genFermetureComptoir} onClick={v=>setP("genFermetureComptoir",v)} label="Activé"/><ToggleBtn val={false} cur={params.genFermetureComptoir} onClick={v=>setP("genFermetureComptoir",v)} label="Désactivé"/></div></div>
               {params.genFermetureComptoir&&(<div style={{background:"#fff",border:"1px solid #e2e8f0",padding:"16px",marginTop:4}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div><div style={{fontSize:11,fontWeight:700,color:"#94a3b8",marginBottom:10}}>RÈGLE 1 — SEUIL HAUT</div><ParamRow label="Si fermeture ≥" value={params.genSeuilHaut} onChange={v=>setP("genSeuilHaut",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirHaut} onChange={v=>setP("genComptoirHaut",v)} unit="h" step="0.5"/></div><div><div style={{fontSize:11,fontWeight:700,color:"#94a3b8",marginBottom:10}}>RÈGLE 2 — SEUIL BAS</div><ParamRow label={`Si entre X et ${params.genSeuilHaut}h`} value={params.genSeuilBas} onChange={v=>setP("genSeuilBas",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirBas} onChange={v=>setP("genComptoirBas",v)} unit="h" step="0.5"/></div></div><div style={{marginTop:10,fontSize:11,color:"#94a3b8"}}>≥ {params.genSeuilHaut}h → {params.genComptoirHaut}h · entre {params.genSeuilBas}h et {params.genSeuilHaut}h → {params.genComptoirBas}h</div></div>)}
             </div>
             <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:"#dcfce7"}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>TOLÉRANCE EFFECTIFS</h3></div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:params.tolEffOn?16:0}}><span style={{fontSize:12,color:"#475569"}}>Vert pâle si proche de la cible</span><div style={{display:"flex",gap:8}}><ToggleBtn val={true} cur={params.tolEffOn} onClick={v=>setP("tolEffOn",v)} label="Activé"/><ToggleBtn val={false} cur={params.tolEffOn} onClick={v=>setP("tolEffOn",v)} label="Désactivé"/></div></div>
               {params.tolEffOn&&<ParamRow label="Différence tolérée (±)" value={params.tolEff} onChange={v=>setP("tolEff",v)} unit="±" step="0.25"/>}
+            </div>
+            <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:"#fef9c3"}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>CORRECTION DISPONIBILITÉS</h3></div>
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:params.dispoFinCorrection?16:0}}>
+                <div style={{flex:1,paddingRight:16}}><div style={{fontSize:12,color:"#475569",fontWeight:500}}>Corriger les fins de dispo en format AM</div><div style={{fontSize:10,color:"#94a3b8",marginTop:3,lineHeight:1.5}}>Ex. fin à 11:00 → interprétée comme 23:00. Corrige les heures de fin inférieures au seuil en ajoutant 12h.</div></div>
+                <div style={{display:"flex",gap:8,flexShrink:0}}><ToggleBtn val={true} cur={params.dispoFinCorrection} onClick={v=>setP("dispoFinCorrection",v)} label="Activé"/><ToggleBtn val={false} cur={params.dispoFinCorrection} onClick={v=>setP("dispoFinCorrection",v)} label="Désactivé"/></div>
+              </div>
+              {params.dispoFinCorrection&&<ParamRow label="Seuil de correction (fin < Xh)" value={params.dispoFinSeuil} onChange={v=>setP("dispoFinSeuil",v)} unit="h" step="1"/>}
             </div>
             <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:"#e2e8f0"}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>FORMAT DES NOMBRES</h3></div>
@@ -706,31 +897,32 @@ function App(){
         )}
 
         {page==="dispo"&&(<>
-          <StickyHeader/>
+          <StickyHeader {...stickyProps}/>
           <div style={{background:"#f1f2f6",boxShadow:"0 1px 6px rgba(0,0,0,.1)"}}>
             <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/>
               <tbody>
                 {emps.map((row,ri)=>{
-                  const dispo=getDispo(row),blk=isBlocked(row.particularite);
-                  const bg=ri%2===0?"#f0f1f7":"#e0e1ed";
+                  const dispo=getDispo(row),blk=isBlocked(row.particularite),bg=ri%2===0?"#f0f1f7":"#e0e1ed";
                   return(<tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
-                    <td style={{padding:"4px 12px 4px 18px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><span style={{fontSize:13,fontWeight:600,color:"#1e293b",fontFamily:"'Inter','Segoe UI',sans-serif"}}>{row.prenom}</span><span style={{fontSize:12,color:"#64748b",fontFamily:"'Inter','Segoe UI',sans-serif"}}>{row.nom}</span></div></td>
+                    <td style={{padding:"4px 12px 4px 18px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><span style={{fontSize:13,fontWeight:600,color:"#1e293b"}}>{row.prenom}</span><span style={{fontSize:12,color:"#64748b"}}>{row.nom}</span></div></td>
                     <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}><PartCell row={row} onChange={(f,v)=>setEmp(row.id,f,v)}/></td>
-                    {dispo.map((d,di)=>{const hasDispo=d.debut||d.fin;return(
-                      <td key={di} style={{padding:"8px 6px",verticalAlign:"middle",textAlign:"center",...blS(di)}}>
+                    {dispo.map((d,di)=>{
+                      const hasDispo=d.debut||d.fin,kD=rd(row.id,di,"debut"),kF=rd(row.id,di,"fin");
+                      return(<td key={di} style={{padding:"8px 6px",verticalAlign:"middle",textAlign:"center",...blS(di)}}>
                         {blk?(<div style={{height:52,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:2,borderRadius:2,background:"#c8cdd8"}}/></div>):(
                           <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
                             <div style={{display:"flex",alignItems:"center",gap:4}}>
                               <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                                <input type="text" value={d.debut} onChange={e=>updDispo(row.id,di,"debut",e.target.value)} onBlur={e=>blurDispo(row.id,di,"debut",e.target.value)} onPaste={e=>onPasteDispo(e,row.id,di)} maxLength={5} style={tiS(!!d.debut,"#fff",false)}/>
+                                <input type="text" value={d.debut} ref={el=>refs.current[kD]=el} onChange={e=>updDispo(row.id,di,"debut",e.target.value)} onBlur={e=>{blurDispo(row.id,di,"debut",e.target.value);setDfk(null);}} onFocus={()=>setDfk(kD)} onClick={e=>e.target.select()} onKeyDown={e=>onKDDispo(e,row.id,di,"debut")} onPaste={e=>onPasteDispo(e,row.id,di)} maxLength={5} style={tiS(!!d.debut,"#fff",dfk===kD)}/>
                                 <div style={{width:16,height:1,background:"#e2e8f0"}}/>
-                                <input type="text" value={d.fin} onChange={e=>updDispo(row.id,di,"fin",e.target.value)} onBlur={e=>blurDispo(row.id,di,"fin",e.target.value)} onPaste={e=>onPasteDispo(e,row.id,di)} maxLength={5} style={tiS(!!d.fin,"#fff",false)}/>
+                                <input type="text" value={d.fin} ref={el=>refs.current[kF]=el} onChange={e=>updDispo(row.id,di,"fin",e.target.value)} onBlur={e=>{blurDispo(row.id,di,"fin",e.target.value);setDfk(null);}} onFocus={()=>setDfk(kF)} onClick={e=>e.target.select()} onKeyDown={e=>onKDDispo(e,row.id,di,"fin")} onPaste={e=>onPasteDispo(e,row.id,di)} maxLength={5} style={tiS(!!d.fin,"#fff",dfk===kF)}/>
                               </div>
                               <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",whiteSpace:"nowrap",visibility:hasDispo?"visible":"hidden",minWidth:20}}>{fmtHs(calcH(d.debut,d.fin))}</span>
                             </div>
                           </div>
                         )}
-                      </td>);})}
+                      </td>);
+                    })}
                     <TotalCell id={row.id}/><DeleteCell id={row.id}/>
                   </tr>);
                 })}
@@ -741,13 +933,13 @@ function App(){
         </>)}
 
         {page==="horaire"&&(<>
-          <StickyHeader/>
+          <StickyHeader {...stickyProps}/>
           <div style={{background:"#f1f2f6",boxShadow:"0 1px 6px rgba(0,0,0,.1)"}}>
             <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/>
               <tbody>
                 {emps.map((row,ri)=>{
-                  const blk=isBlocked(row.particularite);
-                  const bg=ri%2===0?"#f0f1f7":"#e0e1ed";
+                  const blk=isBlocked(row.particularite),bg=ri%2===0?"#f0f1f7":"#e0e1ed";
+                  const dispRow=getDispo(row);
                   return(<tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
                     <td style={{padding:"4px 12px 4px 18px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><input placeholder="Prénom" value={row.prenom} onChange={e=>setEmp(row.id,"prenom",e.target.value)} style={niS}/><input placeholder="Nom" value={row.nom} onChange={e=>setEmp(row.id,"nom",e.target.value)} style={niSsub}/></div></td>
                     <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}><span style={{fontSize:11,color:"#64748b"}}>{row.particularite||"—"}</span></td>
@@ -755,14 +947,15 @@ function App(){
                       const h=calcH(day.debut,day.fin),ch=cin[di];
                       const mO=!!(day.debut&&day.debut===ch.ouverture),mC=!!(day.fin&&day.fin===ch.fermeture);
                       const kD=rk(row.id,di,"debut"),kF=rk(row.id,di,"fin");
+                      const dDay=dispRow[di];
                       return(<td key={di} style={{padding:"8px 6px",verticalAlign:"middle",textAlign:"center",...blS(di)}}>
                         {blk?(<div style={{height:52,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:2,borderRadius:2,background:"#c8cdd8"}}/></div>):(
                           <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
                             <div style={{display:"flex",alignItems:"center",gap:4}}>
                               <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                                <input type="text" value={day.debut} ref={el=>refs.current[kD]=el} onChange={e=>updDay(row.id,di,"debut",e.target.value)} onBlur={e=>{blurDay(row.id,di,"debut",e.target.value);setFk(null);}} onFocus={()=>setFk(kD)} onClick={e=>e.target.select()} onKeyDown={e=>onKD(e,row.id,di,"debut")} onPaste={e=>onPaste(e,row.id,di)} maxLength={5} autoComplete="off" style={tiS(!!day.debut,mO?"#dbeafe":"#fff",fk===kD)}/>
+                                <input type="text" value={day.debut} ref={el=>refs.current[kD]=el} onChange={e=>updDay(row.id,di,"debut",e.target.value)} onBlur={e=>{blurDay(row.id,di,"debut",e.target.value);setFk(null);}} onFocus={()=>setFk(kD)} onClick={e=>e.target.select()} onKeyDown={e=>onKD(e,row.id,di,"debut")} onPaste={e=>onPaste(e,row.id,di)} maxLength={5} autoComplete="off" style={tiS(!!day.debut,mO?"#dbeafe":"#fff",fk===kD)} placeholder={!day.debut&&dDay.debut?dDay.debut:""}/>
                                 <div style={{width:16,height:1,background:"#e2e8f0"}}/>
-                                <input type="text" value={day.fin} ref={el=>refs.current[kF]=el} onChange={e=>updDay(row.id,di,"fin",e.target.value)} onBlur={e=>{blurDay(row.id,di,"fin",e.target.value);setFk(null);}} onFocus={()=>setFk(kF)} onClick={e=>e.target.select()} onKeyDown={e=>onKD(e,row.id,di,"fin")} maxLength={5} autoComplete="off" style={tiS(!!day.fin,mC?"#fff3e0":"#fff",fk===kF)}/>
+                                <input type="text" value={day.fin} ref={el=>refs.current[kF]=el} onChange={e=>updDay(row.id,di,"fin",e.target.value)} onBlur={e=>{blurDay(row.id,di,"fin",e.target.value);setFk(null);}} onFocus={()=>setFk(kF)} onClick={e=>e.target.select()} onKeyDown={e=>onKD(e,row.id,di,"fin")} maxLength={5} autoComplete="off" style={tiS(!!day.fin,mC?"#fff3e0":"#fff",fk===kF)} placeholder={!day.fin&&dDay.fin?dDay.fin:""}/>
                               </div>
                               <span style={{fontSize:10,fontWeight:700,color:h>0&&h<4?"#fb7185":"#94a3b8",whiteSpace:"nowrap",visibility:h>0?"visible":"hidden",minWidth:20}}>{fmtHs(h)}</span>
                             </div>
@@ -791,10 +984,15 @@ function App(){
             </div>
           </div>
         </>)}
+
       </div>
+
+      {PanelRight}
+
     </div>
   );
 }
+
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
