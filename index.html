@@ -26,7 +26,7 @@ const {useState,useRef,useMemo,useCallback,useEffect}=React;
 const DAYS=["Vendredi","Samedi","Dimanche","Lundi","Mardi","Mercredi","Jeudi"];
 const DS=["VEN","SAM","DIM","LUN","MAR","MER","JEU"];
 const PARTS=[{value:"",label:"—"},{value:"Vacances",label:"Vacances"},{value:"Sans solde",label:"Sans solde"},{value:"Max heures",label:"Heures Max"},{value:"Personnalisé",label:"Personnalisé"}];
-const CE=140,CP=150,CD=128,CT=68,CX=32,TW=CE+CP+CD*7+CT+CX,EPS=0.02;
+const CPR=34,CE=140,CP=150,CD=128,CT=68,CX=32,TW=CPR+CE+CP+CD*7+CT+CX,EPS=0.02;
 const DEF_P={jourDecalage:2,jourLimite:17,jourPoids:0.5,soirDebut:18.1,soirLimite:20,soirPoids:0.5,sepDecimal:",",tolEff:0,tolEffOn:false,genMinQuart:4,genEcraser:false,genDelaiApresOuverture:0.5,genSeuilOuverture:12,genNbOuverture:3,genNbFermetureCinema:1,genFermetureComptoir:true,genSeuilHaut:24,genComptoirHaut:23,genSeuilBas:22,genComptoirBas:22,genOuvertureFlexible:true,genMaxHeures:42,dispoFinCorrection:true,dispoFinSeuil:13};
 const BOOL_PARAMS=new Set(["sepDecimal","tolEffOn","genEcraser","genFermetureComptoir","genOuvertureFlexible","dispoFinCorrection"]);
 const SK={cin:"horaire:cin",eff:"horaire:eff",parts:"horaire:parts"};
@@ -67,29 +67,30 @@ const TH=(x={})=>({padding:"5px 8px",textAlign:"center",fontSize:10.5,fontWeight
 const tiS=(f,bg,fc)=>({border:`1px ${fc?"dashed #0f172a":`solid ${f?"#a0a8b8":"#c8cdd8"}`}`,borderRadius:5,padding:"2px 5px",fontSize:13,background:fc?"#e0f0e8":bg,outline:"none",width:72,minWidth:72,maxWidth:72,textAlign:"center",color:f?"#0f172a":"#9ba3af",cursor:"text",fontWeight:500,transition:"border .1s",boxSizing:"border-box"});
 const cinS=(bg,fc)=>({border:`1px ${fc?"dashed #0f172a":"solid #c8cdd8"}`,borderRadius:5,padding:"2px 5px",fontSize:13,background:fc?"#e0f0e8":bg,outline:"none",width:72,textAlign:"center",color:"#0f172a",cursor:"text",fontWeight:400});
 const effS=(exact,close,below,above)=>({border:`1px solid ${exact?"#16a34a":close?"#86efac":below?"#fca5a5":above?"#fcd34d":"#e2e8f0"}`,borderRadius:5,padding:"2px",fontSize:12,fontWeight:600,background:exact?"#dcfce7":close?"#f0fdf4":below?"#fef2f2":above?"#fffbeb":"#f8fafc",outline:"none",width:42,textAlign:"center",color:exact?"#15803d":close?"#16a34a":below?"#dc2626":above?"#b45309":"#334155",cursor:"text"});
+const prioS={width:26,textAlign:"center",border:"1px solid #e2e8f0",borderRadius:3,padding:"2px 2px",fontSize:11,fontWeight:700,color:"#94a3b8",outline:"none",background:"transparent"};
 
 let uid=1;
-const mkE=()=>({id:uid++,prenom:"",nom:"",particularite:"",maxH:"",noteP:"",days:DAYS.map(()=>({debut:"",fin:""})),dispo:mkDispo()});
+const mkE=(prio="")=>({id:uid++,prenom:"",nom:"",particularite:"",maxH:"",noteP:"",prio,days:DAYS.map(()=>({debut:"",fin:""})),dispo:mkDispo()});
 const EMPS=[
-  {...mkE(),prenom:"Sophie",nom:"Grenier"},{...mkE(),prenom:"Christophe",nom:"Duchesne"},
-  {...mkE(),prenom:"Isabella",nom:"Henao Gomez"},{...mkE(),prenom:"Alexis",nom:"Caron"},
-  {...mkE(),prenom:"Stefan",nom:"Sava"},{...mkE(),prenom:"Zach",nom:"Dunn"},
-  {...mkE(),prenom:"Zoé",nom:"Amirault"},{...mkE(),prenom:"Mel",nom:"Tinker Dubé"},
-  {...mkE(),prenom:"Daphnée",nom:"Nadeau"},{...mkE(),prenom:"Justine",nom:"Corriveau"},
-  {...mkE(),prenom:"Williams",nom:"Quirion-Noé"},{...mkE(),prenom:"Léanne",nom:"Caron"},
-  {...mkE(),prenom:"Suraya",nom:"Chakri"},{...mkE(),prenom:"Zach",nom:"Haimeur"},
-  {...mkE(),prenom:"Léo",nom:"Rancourt"},{...mkE(),prenom:"Allyson",nom:"Vaillancourt"},
-  {...mkE(),prenom:"Ariane",nom:"Danis"},{...mkE(),prenom:"Vincent",nom:"Marcouiller"},
-  {...mkE(),prenom:"Anthony",nom:"Gingras"},{...mkE(),prenom:"Felipe",nom:"Gamez Choque"},
-  {...mkE(),prenom:"Ariane",nom:"Lévesque"},{...mkE(),prenom:"Antoine",nom:"Desfossés"},
-  {...mkE(),prenom:"Étienne",nom:"Jourdain"},
+  {...mkE(1),prenom:"Sophie",nom:"Grenier"},{...mkE(2),prenom:"Christophe",nom:"Duchesne"},
+  {...mkE(3),prenom:"Isabella",nom:"Henao Gomez"},{...mkE(4),prenom:"Alexis",nom:"Caron"},
+  {...mkE(5),prenom:"Stefan",nom:"Sava"},{...mkE(6),prenom:"Zach",nom:"Dunn"},
+  {...mkE(7),prenom:"Zoé",nom:"Amirault"},{...mkE(8),prenom:"Mel",nom:"Tinker Dubé"},
+  {...mkE(9),prenom:"Daphnée",nom:"Nadeau"},{...mkE(10),prenom:"Justine",nom:"Corriveau"},
+  {...mkE(11),prenom:"Williams",nom:"Quirion-Noé"},{...mkE(12),prenom:"Léanne",nom:"Caron"},
+  {...mkE(13),prenom:"Suraya",nom:"Chakri"},{...mkE(14),prenom:"Zach",nom:"Haimeur"},
+  {...mkE(15),prenom:"Léo",nom:"Rancourt"},{...mkE(16),prenom:"Allyson",nom:"Vaillancourt"},
+  {...mkE(17),prenom:"Ariane",nom:"Danis"},{...mkE(18),prenom:"Vincent",nom:"Marcouiller"},
+  {...mkE(19),prenom:"Anthony",nom:"Gingras"},{...mkE(20),prenom:"Felipe",nom:"Gamez Choque"},
+  {...mkE(21),prenom:"Ariane",nom:"Lévesque"},{...mkE(22),prenom:"Antoine",nom:"Desfossés"},
+  {...mkE(23),prenom:"Étienne",nom:"Jourdain"},
 ];
 const TEST_CIN=[{ouverture:"10:45",fermeture:"24:00"},{ouverture:"10:45",fermeture:"24:00"},{ouverture:"11:30",fermeture:"22:15"},{ouverture:"12:00",fermeture:"22:15"},{ouverture:"11:30",fermeture:"22:15"},{ouverture:"12:00",fermeture:"22:15"},{ouverture:"12:00",fermeture:"22:15"}];
 const TEST_EFF=[{jour:"3,5",soir:"3"},{jour:"7",soir:"4"},{jour:"6,5",soir:"4"},{jour:"7",soir:"3"},{jour:"6,5",soir:"3"},{jour:"4",soir:"3"},{jour:"3",soir:"3"}];
 const DEF_CIN=DAYS.map(()=>({ouverture:"10:00",fermeture:"23:00"}));
 const DEF_EFF=DAYS.map(()=>({jour:"",soir:""}));
 
-const Cols=()=>(<colgroup><col style={{width:CE}}/><col style={{width:CP}}/>{DAYS.map((_,i)=><col key={i} style={{width:CD}}/>)}<col style={{width:CT}}/><col style={{width:CX}}/></colgroup>);
+const Cols=()=>(<colgroup><col style={{width:CPR}}/><col style={{width:CE}}/><col style={{width:CP}}/>{DAYS.map((_,i)=><col key={i} style={{width:CD}}/>)}<col style={{width:CT}}/><col style={{width:CX}}/></colgroup>);
 const ToggleBtn=({val,cur,onClick,label})=>{const on=cur===val;return(<button onClick={()=>onClick(val)} style={{padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:0,border:`1.5px solid ${on?"#1e293b":"#e2e8f0"}`,background:on?"#1e293b":"#fff",color:on?"#fff":"#475569"}}>{label}</button>);};
 const PartSelect=({value,onChange})=>(<select value={value} onChange={e=>onChange("particularite",e.target.value)} style={selS}>{PARTS.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select>);
 const PanelSection=({label,first})=>(<div style={{padding:"5px 10px 4px",background:"#f8fafc",borderTop:first?undefined:"2px solid #e2e8f0",borderBottom:"1px solid #e2e8f0"}}><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px"}}>{label}</span></div>);
@@ -124,7 +125,7 @@ function StickyHeader({cin,eff,effCalcs,wd,params,cfk,setCfk,cinRefs,updCin,blur
       <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/>
         <tbody>
           <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
-            <td style={{padding:"5px 8px 5px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>HEURES D'OUVERTURE</td><td/>
+            <td/><td style={{padding:"5px 8px 5px 8px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>HEURES D'OUVERTURE</td><td/>
             {cin.map((ch,di)=>{
               const kO=ck(di,"ouverture"),kF=ck(di,"fermeture");
               return(
@@ -140,7 +141,7 @@ function StickyHeader({cin,eff,effCalcs,wd,params,cfk,setCfk,cinRefs,updCin,blur
             <td/><td/>
           </tr>
           <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
-            <td style={{padding:"5px 8px 5px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>EFFECTIFS</td><td/>
+            <td/><td style={{padding:"5px 8px 5px 8px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>EFFECTIFS</td><td/>
             {eff.map((ef,di)=>{
               const{jour:cj,soir:cs}=effCalcs[di];
               const mj=parseFloat((ef.jour||"").replace(",","."))||0,ms=parseFloat((ef.soir||"").replace(",","."))||0;
@@ -167,7 +168,8 @@ function StickyHeader({cin,eff,effCalcs,wd,params,cfk,setCfk,cinRefs,updCin,blur
             <td/><td/>
           </tr>
           <tr style={{borderBottom:"2px solid #c8cdd8",background:"#f8fafc",height:26}}>
-            <td style={TH({textAlign:"left",paddingLeft:18})}>ÉQUIPIER</td>
+            <td style={TH({color:"#c8cdd8"})}>#</td>
+            <td style={TH({textAlign:"left",paddingLeft:8})}>ÉQUIPIER</td>
             <td style={TH({borderLeft:"1px solid #c8cdd8"})}>PARTICULARITÉ</td>
             {DS.map((d,i)=>(<td key={d} style={TH({borderLeft:"1px solid #c8cdd8",borderRight:i===6?"1px solid #c8cdd8":undefined})}><div style={{color:"#475569"}}>{d}</div><div style={{fontWeight:500,fontSize:10,color:"#64748b",marginTop:1}}>{fmt(wd[i],true)}</div></td>))}
             <td style={TH({color:"#0f172a"})}>TOTAL</td><td style={TH()}/>
@@ -178,6 +180,7 @@ function StickyHeader({cin,eff,effCalcs,wd,params,cfk,setCfk,cinRefs,updCin,blur
   );
 }
 
+// ─── PDF parser (match par numéro de priorité) ────────────────────────────────
 async function parsePDF(file,emps,getDispo){
   const buf=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf}).promise;
@@ -192,8 +195,17 @@ async function parsePDF(file,emps,getDispo){
   const clusters=[];
   for(const x of plageXs){const last=clusters[clusters.length-1];if(!last||x-last.max>15)clusters.push({xs:[x],max:x});else{last.xs.push(x);last.max=x;}}
   const colXs=clusters.sort((a,b)=>b.xs.length-a.xs.length).slice(0,7).map(c=>Math.round(c.xs.reduce((s,x)=>s+x,0)/c.xs.length)).sort((a,b)=>a-b);
-  const dispItems=allItems.filter(it=>/^disponibilit[eé]$/i.test(it.t)).map(dispIt=>{const c=allItems.filter(it=>Math.abs(it.y-dispIt.y)<6&&it.x<dispIt.x&&/^\d{1,2}$/.test(it.t)).sort((a,b)=>b.x-a.x);return{dispIt,priorite:c.length?parseInt(c[0].t):9999};}).sort((a,b)=>a.priorite-b.priorite).map(({dispIt})=>dispIt);
-  const dispoLignes=dispItems.map(dispIt=>{
+
+  // Garder la priorité associée à chaque ligne de dispo
+  const dispItemsRaw=allItems
+    .filter(it=>/^disponibilit[eé]$/i.test(it.t))
+    .map(dispIt=>{
+      const c=allItems.filter(it=>Math.abs(it.y-dispIt.y)<6&&it.x<dispIt.x&&/^\d{1,2}$/.test(it.t)).sort((a,b)=>b.x-a.x);
+      return{dispIt,priorite:c.length?parseInt(c[0].t):9999};
+    })
+    .sort((a,b)=>a.priorite-b.priorite);
+
+  const dispoAvecPrio=dispItemsRaw.map(({dispIt,priorite})=>{
     const dispo=DAYS.map(()=>({debut:"",fin:""}));
     allItems.filter(it=>Math.abs(it.y-dispIt.y)<6&&rePlage.test(it.t)).forEach(it=>{
       const m=it.t.match(rePlage);let best=0,bestDist=Infinity;
@@ -202,13 +214,16 @@ async function parsePDF(file,emps,getDispo){
       const finH=fh+fm/60;
       dispo[best]={debut:m[1],fin:finH<dh+dm/60?toStr(finH+24):m[2]};
     });
-    return dispo;
+    return{dispo,priorite};
   });
-  let matched=0,pdfIdx=0;
+
+  let matched=0;
   const newEmps=emps.map(e=>({...e,dispo:getDispo(e).map(d=>({...d}))}));
-  for(let ai=0;ai<emps.length&&pdfIdx<dispoLignes.length;ai++){
-    if(isBlocked(emps[ai].particularite))continue;
-    newEmps[ai]={...newEmps[ai],dispo:dispoLignes[pdfIdx++]};matched++;
+
+  for(const{dispo,priorite}of dispoAvecPrio){
+    // Chercher l'employé dont le numéro de priorité correspond
+    const idx=newEmps.findIndex(e=>!isBlocked(e.particularite)&&String(e.prio)===String(priorite));
+    if(idx>=0){newEmps[idx]={...newEmps[idx],dispo};matched++;}
   }
   return{newEmps,matched};
 }
@@ -241,7 +256,7 @@ function App(){
       const[sc,se,sp]=await Promise.all([stoLoad(SK.cin),stoLoad(SK.eff),stoLoad(SK.parts)]);
       if(sc&&sc.length===7)setCin(sc);
       if(se&&se.length===7)setEff(se);
-      if(sp)setEmps(l=>l.map(e=>{const p=sp[e.id];return p?{...e,particularite:p.particularite||"",maxH:p.maxH||"",noteP:p.noteP||""}:e;}));
+      if(sp)setEmps(l=>l.map(e=>{const p=sp[e.id];return p?{...e,particularite:p.particularite||"",maxH:p.maxH||"",noteP:p.noteP||"",prio:p.prio!==undefined?p.prio:e.prio}:e;}));
       setSavedOk(await stoSave("horaire:test","ok"));
       setLoaded(true);
     })();
@@ -250,7 +265,7 @@ function App(){
   useEffect(()=>{if(loaded)stoSave(SK.eff,eff);},[eff,loaded]);
   useEffect(()=>{
     if(!loaded)return;
-    const p={};emps.forEach(e=>{p[e.id]={particularite:e.particularite,maxH:e.maxH,noteP:e.noteP};});
+    const p={};emps.forEach(e=>{p[e.id]={particularite:e.particularite,maxH:e.maxH,noteP:e.noteP,prio:e.prio};});
     stoSave(SK.parts,p);
   },[emps,loaded]);
 
@@ -320,7 +335,7 @@ function App(){
   const updDispo=(id,di,f,v)=>setEmps(l=>l.map(x=>x.id!==id?x:{...x,dispo:(x.dispo&&x.dispo.length===7?x.dispo:mkDispo()).map((d,i)=>i===di?{...d,[f]:v}:d)}));
   const blurDispo=(id,di,f,v)=>setEmps(l=>l.map(x=>x.id!==id?x:{...x,dispo:(x.dispo&&x.dispo.length===7?x.dispo:mkDispo()).map((d,i)=>i===di?{...d,[f]:normT(v)}:d)}));
   const setEmp=(id,f,v)=>setEmps(l=>l.map(x=>x.id===id?{...x,[f]:v}:x));
-  const addEmp=()=>setEmps(l=>[...l,mkE()]);
+  const addEmp=()=>setEmps(l=>[...l,mkE("")]);
   const remEmp=id=>setEmps(l=>l.filter(x=>x.id!==id));
   const setEv=(di,f,v)=>setEff(l=>l.map((x,i)=>i===di?{...x,[f]:v}:x));
   const setP=(f,v)=>setParams(p=>({...p,[f]:BOOL_PARAMS.has(f)?v:(parseFloat(v)||0)}));
@@ -432,9 +447,7 @@ function App(){
       if(d!==null){if(d<thr)jour+=1;else if(d<params.jourLimite)jour+=params.jourPoids;}
       if(f!==null){if(f>=params.soirDebut&&f<=params.soirLimite)soir+=params.soirPoids;else if(f>params.soirLimite)soir+=1;}
     }
-    return{ouvH,ferH,ferEff,thr,jT,sT,
-      jourRond:jT>0&&Number.isInteger(jT),soirRond:sT>0&&Number.isInteger(sT),
-      ferCin,ouvCnt,jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};
+    return{ouvH,ferH,ferEff,thr,jT,sT,jourRond:jT>0&&Number.isInteger(jT),soirRond:sT>0&&Number.isInteger(sT),ferCin,ouvCnt,jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};
   };
   const updCache=(c,debut,fin)=>{
     const d=toH(debut),f=toH(fin);
@@ -442,7 +455,6 @@ function App(){
     if(f!==null){if(f>=c.ferH-EPS)c.ferCin++;if(f>=params.soirDebut&&f<=params.soirLimite)c.soir+=params.soirPoids;else if(f>params.soirLimite)c.soir+=1;c.soir=Math.round(c.soir*10)/10;}
   };
 
-  // ── Core assigner ─────────────────────────────────────────────────────────
   const _assigner=(newDays,ei,di,cache,wt,plus=false)=>{
     if(!cache)return false;
     const emp=emps[ei];if(isBlocked(emp.particularite))return false;
@@ -462,21 +474,15 @@ function App(){
     const peutOuv=empDebut<=params.genSeuilOuverture+EPS;
     const dOuv=params.genOuvertureFlexible&&peutOuv?toStr(cache.ouvCnt>=params.genNbOuverture?ouvH+params.genDelaiApresOuverture:ouvH):toStr(Math.max(empDebut,ouvH));
     const opts=plus?[
-      {d:dOuv,      f:toStr(ferH),   fc:true, no:true},
-      {d:dOuv,      f:toStr(ferEff), fc:false,no:true},
-      {d:toStr(14), f:toStr(ferH),   fc:true, no:false,s14:true},
-      {d:toStr(14), f:toStr(ferEff), fc:false,no:false,s14:true},
-      {d:toStr(18), f:toStr(ferH),   fc:true, no:false},
-      {d:toStr(18), f:toStr(ferEff), fc:false,no:false},
-      {d:dOuv,      f:toStr(20),     fc:false,no:true, s20:true},
-      {d:dOuv,      f:toStr(18),     fc:false,no:true},
-      {d:toStr(14), f:toStr(18),     fc:false,no:false,s14:true},
+      {d:dOuv,f:toStr(ferH),fc:true,no:true},{d:dOuv,f:toStr(ferEff),fc:false,no:true},
+      {d:toStr(14),f:toStr(ferH),fc:true,no:false,s14:true},{d:toStr(14),f:toStr(ferEff),fc:false,no:false,s14:true},
+      {d:toStr(18),f:toStr(ferH),fc:true,no:false},{d:toStr(18),f:toStr(ferEff),fc:false,no:false},
+      {d:dOuv,f:toStr(20),fc:false,no:true,s20:true},{d:dOuv,f:toStr(18),fc:false,no:true},
+      {d:toStr(14),f:toStr(18),fc:false,no:false,s14:true},
     ]:[
-      {d:dOuv,      f:toStr(ferH),   fc:true, no:true},
-      {d:dOuv,      f:toStr(ferEff), fc:false,no:true},
-      {d:toStr(18), f:toStr(ferH),   fc:true, no:false},
-      {d:toStr(18), f:toStr(ferEff), fc:false,no:false},
-      {d:dOuv,      f:toStr(18),     fc:false,no:true},
+      {d:dOuv,f:toStr(ferH),fc:true,no:true},{d:dOuv,f:toStr(ferEff),fc:false,no:true},
+      {d:toStr(18),f:toStr(ferH),fc:true,no:false},{d:toStr(18),f:toStr(ferEff),fc:false,no:false},
+      {d:dOuv,f:toStr(18),fc:false,no:true},
     ];
     for(const o of opts){
       if(o.s14&&jourRond)continue;if(o.s20&&soirRond)continue;
@@ -499,7 +505,6 @@ function App(){
     return _assigner(newDays,ei,di,cache,wt,false);
   };
 
-  // ── Attribuer tous ────────────────────────────────────────────────────────
   const genererTous=()=>{
     const newDays=emps.map(e=>e.days.map(d=>({...d})));
     const wt=emps.map((_,ei)=>newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0));
@@ -510,7 +515,6 @@ function App(){
     showMsg(`${assigns} quart${assigns!==1?"s":""} assigné${assigns!==1?"s":""}`);setPage("horaire");
   };
 
-  // ── Priorité fermeture (partagé) ──────────────────────────────────────────
   const runPrioriteFermeture=(newDays)=>{
     let assigns=0;
     for(let di=0;di<7;di++){
@@ -543,7 +547,6 @@ function App(){
     return assigns;
   };
 
-  // ── Attribuer ++ ──────────────────────────────────────────────────────────
   const genererTousPlus=()=>{
     const newDays=emps.map(e=>e.days.map(d=>({...d})));
     const wt=emps.map((_,ei)=>newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0));
@@ -555,7 +558,6 @@ function App(){
     showMsg(`${assigns} quarts assignés`);setPage("horaire");
   };
 
-  // ── Rééquilibrer ─────────────────────────────────────────────────────────
   const genererRééquilibrerJour=(targetDi)=>{
     const newDays=emps.map(e=>e.days.map(d=>({...d})));let changes=0;
     const getEffDay=di=>{const c=mkDayCache(di,newDays);return c?{jour:c.jour,soir:c.soir}:{jour:0,soir:0};};
@@ -588,14 +590,12 @@ function App(){
       if(newDays[ei][targetDi].debut||newDays[ei][targetDi].fin)continue;
       const dispo=getDispo(emp);if(!dispo[targetDi].debut&&!dispo[targetDi].fin)continue;
       let moved=false;
-      // Strat 1
       for(let srcDi=0;srcDi<7&&!moved;srcDi++){
         if(srcDi===targetDi||!newDays[ei][srcDi].debut||!newDays[ei][srcDi].fin)continue;
         const sv={...newDays[ei][srcDi]};newDays[ei][srcDi]={debut:"",fin:""};
         if(assignerUnJour(newDays,ei,targetDi)){if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}}
         else newDays[ei][srcDi]=sv;
       }
-      // Strat 2
       if(!moved){
         const splitH=18;
         for(let srcDi=0;srcDi<7&&!moved;srcDi++){
@@ -613,17 +613,12 @@ function App(){
           if(jF-jD<params.genMinQuart)continue;
           const wtEi=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
           if(wtEi-calcH(srcDay.debut,srcDay.fin)+calcH(toStr(splitH),srcDay.fin)+(jF-jD)>getMaxH(emp))continue;
-          const sv={...srcDay};
-          newDays[ei][srcDi]={debut:toStr(splitH),fin:srcDay.fin};
-          newDays[ei][targetDi]={debut:toStr(jD),fin:toStr(jF)};
-          if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}
-          else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}
+          const sv={...srcDay};newDays[ei][srcDi]={debut:toStr(splitH),fin:srcDay.fin};newDays[ei][targetDi]={debut:toStr(jD),fin:toStr(jF)};
+          if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}
         }
       }
-      // Strat 3
       if(!moved){
-        const splitH=18;
-        const tS2=parseFloat((eff[targetDi].soir||"").replace(",","."))||0;
+        const splitH=18;const tS2=parseFloat((eff[targetDi].soir||"").replace(",","."))||0;
         if(tS2>0&&getEffDay(targetDi).soir<tS2-EPS){
           const fTgt=dispo[targetDi].fin?toH(dispo[targetDi].fin):null;
           const chTgt=cin[targetDi];
@@ -638,10 +633,8 @@ function App(){
                 if(soirFin-splitH<params.genMinQuart)continue;
                 const wtEi=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
                 if(wtEi-calcH(srcDay.debut,srcDay.fin)+(soirFin-splitH)>getMaxH(emp))continue;
-                const sv={...srcDay};newDays[ei][srcDi]={debut:"",fin:""};
-                newDays[ei][targetDi]={debut:toStr(splitH),fin:toStr(soirFin)};
-                if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}
-                else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}
+                const sv={...srcDay};newDays[ei][srcDi]={debut:"",fin:""};newDays[ei][targetDi]={debut:toStr(splitH),fin:toStr(soirFin)};
+                if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}
               }
             }
           }
@@ -713,15 +706,9 @@ function App(){
     for(let di=0;di<7;di++){
       const c=mkDayCache(di,newDays);if(!c)continue;
       const{jT,sT}=c;
-      const atCapacity=()=>{
-        if(!jT&&!sT)return false;
-        let j=c.jour,s=c.soir;
-        if(dV!==null){if(dV<c.thr)j+=1;else if(dV<params.jourLimite)j+=params.jourPoids;}
-        if(fV!==null){if(fV>=params.soirDebut&&fV<=params.soirLimite)s+=params.soirPoids;else if(fV>params.soirLimite)s+=1;}
-        return(jT>0&&j>jT+EPS)||(sT>0&&s>sT+EPS);
-      };
+      const atCap=()=>{if(!jT&&!sT)return false;let j=c.jour,s=c.soir;if(dV!==null){if(dV<c.thr)j+=1;else if(dV<params.jourLimite)j+=params.jourPoids;}if(fV!==null){if(fV>=params.soirDebut&&fV<=params.soirLimite)s+=params.soirPoids;else if(fV>params.soirLimite)s+=1;}return(jT>0&&j>jT+EPS)||(sT>0&&s>sT+EPS);};
       for(let ei=0;ei<emps.length;ei++){
-        if(atCapacity())break;
+        if(atCap())break;
         const emp=emps[ei];if(isBlocked(emp.particularite))continue;
         if(newDays[ei][di].debut||newDays[ei][di].fin)continue;
         const disp=getDispo(emp);
@@ -745,6 +732,7 @@ function App(){
     return(<td style={{textAlign:"center",verticalAlign:"middle",padding:"10px 8px"}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,minHeight:36}}><span style={{fontSize:14,fontWeight:800,visibility:tot>0?"visible":"hidden",color:tc}}>{fmtH(tot)||"0"}</span><div style={{width:36,height:3,borderRadius:2,background:"#d1d5db",overflow:"hidden"}}><div style={{width:`${Math.min(100,(tot/(maxH||40))*100)}%`,height:"100%",background:tc,borderRadius:2}}/></div></div></td>);
   };
   const DeleteCell=({id})=>(<td style={{textAlign:"center",verticalAlign:"middle",padding:"0 6px"}}><button onClick={()=>remEmp(id)} style={{background:"none",border:"none",cursor:"pointer",color:"#c8cdd8",fontSize:14,padding:4}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#c8cdd8"}>×</button></td>);
+  const PrioCell=({row})=>(<td style={{textAlign:"center",verticalAlign:"middle",padding:"0 4px"}}><input type="text" value={row.prio===undefined||row.prio===null?"":row.prio} onChange={e=>setEmp(row.id,"prio",e.target.value)} maxLength={3} style={prioS} title="Numéro de priorité PDF"/></td>);
   const rstS=act=>({border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,width:"100%",textAlign:"left",background:act?"#fef2f2":"#fff",color:act?"#dc2626":"#475569",transition:"background .15s"});
   const defBadge=di=>{
     const d=deficits[di];if(!d.hasDeficit)return <span style={{fontSize:10,color:"#16a34a",fontWeight:700}}>✓</span>;
@@ -837,7 +825,6 @@ function App(){
   return(
     <div style={{fontFamily:"'Inter','Segoe UI',sans-serif",background:"#5a6080",minHeight:"100vh",padding:"24px 12px",display:"flex",justifyContent:"center",gap:12,alignItems:"flex-start"}}>
       <input ref={importRef} type="file" accept=".pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])handleImport(e.target.files[0]);e.target.value="";}}/>
-
       {genMsg&&<div style={{position:"fixed",bottom:24,right:16,zIndex:2000,padding:"10px 16px",background:"#dcfce7",border:"1.5px solid #16a34a",fontSize:12,fontWeight:600,color:"#15803d",borderRadius:6,boxShadow:"0 4px 12px rgba(0,0,0,.15)"}}>{genMsg}</div>}
       {importMsg&&<div style={{position:"fixed",bottom:genMsg?72:24,right:16,zIndex:2000,padding:"10px 16px",background:"#dbeafe",border:"1.5px solid #3b82f6",fontSize:12,fontWeight:600,color:"#1d4ed8",borderRadius:6,boxShadow:"0 4px 12px rgba(0,0,0,.15)"}}>{importMsg}</div>}
 
@@ -904,7 +891,8 @@ function App(){
                 {emps.map((row,ri)=>{
                   const dispo=getDispo(row),blk=isBlocked(row.particularite),bg=ri%2===0?"#f0f1f7":"#e0e1ed";
                   return(<tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
-                    <td style={{padding:"4px 12px 4px 18px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><span style={{fontSize:13,fontWeight:600,color:"#1e293b"}}>{row.prenom}</span><span style={{fontSize:12,color:"#64748b"}}>{row.nom}</span></div></td>
+                    <PrioCell row={row}/>
+                    <td style={{padding:"4px 12px 4px 8px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><span style={{fontSize:13,fontWeight:600,color:"#1e293b"}}>{row.prenom}</span><span style={{fontSize:12,color:"#64748b"}}>{row.nom}</span></div></td>
                     <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}><PartCell row={row} onChange={(f,v)=>setEmp(row.id,f,v)}/></td>
                     {dispo.map((d,di)=>{
                       const hasDispo=d.debut||d.fin,kD=rd(row.id,di,"debut"),kF=rd(row.id,di,"fin");
@@ -941,7 +929,8 @@ function App(){
                   const blk=isBlocked(row.particularite),bg=ri%2===0?"#f0f1f7":"#e0e1ed";
                   const dispRow=getDispo(row);
                   return(<tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
-                    <td style={{padding:"4px 12px 4px 18px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><input placeholder="Prénom" value={row.prenom} onChange={e=>setEmp(row.id,"prenom",e.target.value)} style={niS}/><input placeholder="Nom" value={row.nom} onChange={e=>setEmp(row.id,"nom",e.target.value)} style={niSsub}/></div></td>
+                    <PrioCell row={row}/>
+                    <td style={{padding:"4px 12px 4px 8px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><input placeholder="Prénom" value={row.prenom} onChange={e=>setEmp(row.id,"prenom",e.target.value)} style={niS}/><input placeholder="Nom" value={row.nom} onChange={e=>setEmp(row.id,"nom",e.target.value)} style={niSsub}/></div></td>
                     <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}><span style={{fontSize:11,color:"#64748b"}}>{row.particularite||"—"}</span></td>
                     {row.days.map((day,di)=>{
                       const h=calcH(day.debut,day.fin),ch=cin[di];
@@ -969,7 +958,7 @@ function App(){
               </tbody>
               <tfoot>
                 <tr style={{borderTop:"2px solid #c8cdd8",background:"#f8fafc"}}>
-                  <td style={{padding:"6px 12px 6px 18px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px"}}>TOTAL / JOUR</td>
+                  <td/><td style={{padding:"6px 12px 6px 8px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px"}}>TOTAL / JOUR</td>
                   <td style={{borderLeft:"1px solid #c8cdd8"}}/>
                   {dayTotals.map((h,di)=>(<td key={di} style={{textAlign:"center",padding:"10px 6px",...blS(di)}}>{h>0?<span style={{fontSize:12,fontWeight:700,color:"#475569"}}>{fmtH(h)}</span>:<span style={{color:"#e2e8f0"}}>—</span>}</td>))}
                   <td style={{textAlign:"center",padding:"10px 8px"}}><span style={{fontSize:13,fontWeight:800,color:"#0f172a"}}>{fmtH(grand)||"—"}</span></td>
@@ -986,9 +975,7 @@ function App(){
         </>)}
 
       </div>
-
       {PanelRight}
-
     </div>
   );
 }
