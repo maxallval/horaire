@@ -181,7 +181,7 @@ function StickyHeader({cin,eff,effCalcs,wd,params,cfk,setCfk,cinRefs,updCin,blur
 }
 
 // ─── PDF parser (match par numéro de priorité) ────────────────────────────────
-async function parsePDF(file,emps,getDispo){
+async function parsePDF(file,emps,getDispo,skipPrioZero=true){
   const buf=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf}).promise;
   const allItems=[];
@@ -221,7 +221,7 @@ async function parsePDF(file,emps,getDispo){
   const newEmps=emps.map(e=>({...e,dispo:getDispo(e).map(d=>({...d}))}));
 
   for(const{dispo,priorite}of dispoAvecPrio){
-    if(params.dispoSkipPrioZero&&String(priorite)==="0")continue;
+    if(skipPrioZero&&String(priorite)==="0")continue;
     // Chercher l'employé dont le numéro de priorité correspond
     const idx=newEmps.findIndex(e=>!isBlocked(e.particularite)&&String(e.prio)===String(priorite));
     if(idx>=0){newEmps[idx]={...newEmps[idx],dispo};matched++;}
@@ -343,7 +343,7 @@ function App(){
   const showMsg=(msg,ms=4000)=>{setGenMsg(msg);setTimeout(()=>setGenMsg(null),ms);};
   const loadTestData=()=>{setCin(TEST_CIN);setEff(TEST_EFF);setPage("dispo");};
   const handleImport=async file=>{
-    try{const{newEmps,matched}=await parsePDF(file,emps,getDispo);setEmps(newEmps);setImportMsg(`✓ ${matched} employé${matched!==1?"s":""} importé${matched!==1?"s":""}`);setTimeout(()=>setImportMsg(null),5000);setPage("dispo");}
+    try{const{newEmps,matched}=await parsePDF(file,emps,getDispo,params.dispoSkipPrioZero);setEmps(newEmps);setImportMsg(`✓ ${matched} employé${matched!==1?"s":""} importé${matched!==1?"s":""}`);setTimeout(()=>setImportMsg(null),5000);setPage("dispo");}
     catch(err){setImportMsg("Erreur : "+err.message);setTimeout(()=>setImportMsg(null),5000);}
   };
   const effacerHoraire=()=>{
