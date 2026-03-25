@@ -11,7 +11,7 @@
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter','Segoe UI',sans-serif;background:#5a6080;min-height:100vh;}
+body{font-family:'Inter','Segoe UI',sans-serif;background:rgb(14,27,52);min-height:100vh;}
 input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{-webkit-appearance:none;}
 input[type=number]{-moz-appearance:textfield;}
 select{-webkit-appearance:none;-moz-appearance:none;}
@@ -27,12 +27,31 @@ const DAYS=["Vendredi","Samedi","Dimanche","Lundi","Mardi","Mercredi","Jeudi"];
 const DS=["VEN","SAM","DIM","LUN","MAR","MER","JEU"];
 const PARTS=[{value:"",label:"—"},{value:"Vacances",label:"Vacances"},{value:"Sans solde",label:"Sans solde"},{value:"Max heures",label:"Heures Max"},{value:"Personnalisé",label:"Personnalisé"}];
 const CPR=34,CE=140,CP=150,CD=128,CT=68,CX=32,TW=CPR+CE+CP+CD*7+CT+CX,EPS=0.02;
-const DEF_P={jourDecalage:2,jourLimite:17,jourPoids:0.5,soirDebut:18.1,soirLimite:20,soirPoids:0.5,sepDecimal:",",tolEff:0,tolEffOn:false,genMinQuart:4,genEcraser:false,genDelaiApresOuverture:0.5,genSeuilOuverture:12,genNbOuverture:3,genNbFermetureCinema:1,genFermetureComptoir:true,genSeuilHaut:24,genComptoirHaut:23,genSeuilBas:22,genComptoirBas:22,genOuvertureFlexible:true,genMaxHeures:42,dispoFinCorrection:true,dispoFinSeuil:13,dispoSkipPrioZero:true};
+const DEF_P={
+  jourDecalage:2,jourLimite:17,jourPoids:0.5,
+  soirDebut:18.1,soirLimite:20,soirPoids:0.5,
+  sepDecimal:",",tolEff:0,tolEffOn:false,
+  genMinQuart:4,genEcraser:false,genDelaiApresOuverture:0.5,
+  genSeuilOuverture:12,genNbOuverture:3,genNbFermetureCinema:1,
+  genFermetureComptoir:true,genSeuilHaut:24,genComptoirHaut:23,
+  genSeuilBas:22,genComptoirBas:22,genOuvertureFlexible:true,genMaxHeures:42,
+  dispoFinCorrection:true,dispoFinSeuil:13,dispoSkipPrioZero:true,
+};
 const BOOL_PARAMS=new Set(["sepDecimal","tolEffOn","genEcraser","genFermetureComptoir","genOuvertureFlexible","dispoFinCorrection","dispoSkipPrioZero"]);
 const SK={cin:"horaire:cin",eff:"horaire:eff",parts:"horaire:parts"};
 
-const stoSave=async(k,v)=>{try{if(!window.storage)return false;await window.storage.set(k,JSON.stringify(v));return true;}catch(e){return false;}};
-const stoLoad=async k=>{try{if(!window.storage)return null;const r=await window.storage.get(k);return r?JSON.parse(r.value):null;}catch(e){return null;}};
+const stoSave=async(k,v)=>{
+  try{
+    if(window.storage)return !!(await window.storage.set(k,JSON.stringify(v)));
+    localStorage.setItem(k,JSON.stringify(v));return true;
+  }catch{return false;}
+};
+const stoLoad=async k=>{
+  try{
+    if(window.storage){const r=await window.storage.get(k);return r?JSON.parse(r.value):null;}
+    const r=localStorage.getItem(k);return r?JSON.parse(r):null;
+  }catch{return null;}
+};
 
 const addD=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
 const fmt=(d,s=false)=>d.toLocaleDateString("fr-CA",s?{day:"2-digit",month:"short"}:{day:"numeric",month:"long"});
@@ -57,17 +76,19 @@ const normT=v=>{
 const isoW=d=>{const r=new Date(d);r.setHours(0,0,0,0);r.setDate(r.getDate()+3-(r.getDay()+6)%7);const w=new Date(r.getFullYear(),0,4);return 1+Math.round(((r-w)/86400000-(3-(w.getDay()+6)%7))/7);};
 const nextFri=()=>{const t=new Date(),f=new Date(t);f.setDate(t.getDate()+(5-t.getDay()+7)%7+7);f.setHours(0,0,0,0);return f;};
 const filterEmpty=rows=>{const keep=rows[0].reduce((a,_,ci)=>{if(rows.some(r=>r[ci]&&r[ci].trim()))a.push(ci);return a;},[]);return rows.map(r=>keep.map(ci=>r[ci]||""));};
+const selAll=e=>e.target.select();
 
 const selS={border:"none",fontSize:12,color:"#475569",background:"transparent",outline:"none",cursor:"pointer",appearance:"none",textAlign:"center",fontWeight:500,width:"100%"};
 const uSty={border:"none",borderBottom:"1px solid #94a3b8",padding:"1px 2px",fontSize:12,outline:"none",color:"#334155",background:"transparent"};
-const niS={display:"block",width:"100%",border:"none",padding:0,fontSize:13,fontWeight:600,color:"#1e293b",background:"transparent",outline:"none",boxSizing:"border-box",fontFamily:"'Inter','Segoe UI',sans-serif"};
+const niS={display:"block",width:"100%",border:"none",padding:0,fontSize:13,fontWeight:600,color:"#1e293b",background:"transparent",outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
 const niSsub={...niS,fontWeight:400,color:"#64748b",fontSize:12};
 const blS=i=>({borderLeft:"1px solid #c8cdd8",borderRight:i===6?"1px solid #c8cdd8":undefined});
 const TH=(x={})=>({padding:"5px 8px",textAlign:"center",fontSize:10.5,fontWeight:700,color:"#64748b",letterSpacing:"0.6px",background:"#f8fafc",...x});
-const tiS=(f,bg,fc)=>({border:`1px ${fc?"dashed #0f172a":`solid ${f?"#a0a8b8":"#c8cdd8"}`}`,borderRadius:5,padding:"2px 5px",fontSize:13,background:fc?"#e0f0e8":bg,outline:"none",width:72,minWidth:72,maxWidth:72,textAlign:"center",color:f?"#0f172a":"#9ba3af",cursor:"text",fontWeight:500,transition:"border .1s",boxSizing:"border-box"});
-const cinS=(bg,fc)=>({border:`1px ${fc?"dashed #0f172a":"solid #c8cdd8"}`,borderRadius:5,padding:"2px 5px",fontSize:13,background:fc?"#e0f0e8":bg,outline:"none",width:72,textAlign:"center",color:"#0f172a",cursor:"text",fontWeight:400});
+const tiS=(filled,bg,focused)=>({border:`1px ${focused?"dashed #0f172a":`solid ${filled?"#a0a8b8":"#c8cdd8"}`}`,borderRadius:5,padding:"2px 5px",fontSize:13,background:focused?"#e0f0e8":bg,outline:"none",width:72,minWidth:72,maxWidth:72,textAlign:"center",color:filled?"#0f172a":"#9ba3af",cursor:"text",fontWeight:500,transition:"border .1s",boxSizing:"border-box"});
+const cinS=(bg,focused)=>({border:`1px ${focused?"dashed #0f172a":"solid #c8cdd8"}`,borderRadius:5,padding:"2px 5px",fontSize:13,background:focused?"#e0f0e8":bg,outline:"none",width:72,textAlign:"center",color:"#0f172a",cursor:"text",fontWeight:400});
 const effS=(exact,close,below,above)=>({border:`1px solid ${exact?"#16a34a":close?"#86efac":below?"#fca5a5":above?"#fcd34d":"#e2e8f0"}`,borderRadius:5,padding:"2px",fontSize:12,fontWeight:600,background:exact?"#dcfce7":close?"#f0fdf4":below?"#fef2f2":above?"#fffbeb":"#f8fafc",outline:"none",width:42,textAlign:"center",color:exact?"#15803d":close?"#16a34a":below?"#dc2626":above?"#b45309":"#334155",cursor:"text"});
-const prioS={width:26,textAlign:"center",border:"1px solid #e2e8f0",borderRadius:3,padding:"2px 2px",fontSize:11,fontWeight:700,color:"#94a3b8",outline:"none",background:"transparent"};
+const prioS={width:26,textAlign:"center",border:"1px solid #e2e8f0",borderRadius:3,padding:"2px",fontSize:11,fontWeight:700,color:"#94a3b8",outline:"none",background:"transparent"};
+const panelStyle={position:"sticky",top:24,zIndex:100,width:178,background:"#fff",boxShadow:"0 4px 20px rgba(0,0,0,.18)",border:"1.5px solid #e2e8f0",display:"flex",flexDirection:"column",overflow:"hidden",flexShrink:0};
 
 let uid=1;
 const mkE=(prio="")=>({id:uid++,prenom:"",nom:"",particularite:"",maxH:"",noteP:"",prio,days:DAYS.map(()=>({debut:"",fin:""})),dispo:mkDispo()});
@@ -91,138 +112,99 @@ const DEF_CIN=DAYS.map(()=>({ouverture:"10:00",fermeture:"23:00"}));
 const DEF_EFF=DAYS.map(()=>({jour:"",soir:""}));
 
 const Cols=()=>(<colgroup><col style={{width:CPR}}/><col style={{width:CE}}/><col style={{width:CP}}/>{DAYS.map((_,i)=><col key={i} style={{width:CD}}/>)}<col style={{width:CT}}/><col style={{width:CX}}/></colgroup>);
-const ToggleBtn=({val,cur,onClick,label})=>{const on=cur===val;return(<button onClick={()=>onClick(val)} style={{padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:0,border:`1.5px solid ${on?"#1e293b":"#e2e8f0"}`,background:on?"#1e293b":"#fff",color:on?"#fff":"#475569"}}>{label}</button>);};
+const ToggleBtn=({val,cur,onClick,label})=>{const on=cur===val;return <button onClick={()=>onClick(val)} style={{padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:0,border:`1.5px solid ${on?"#1e293b":"#e2e8f0"}`,background:on?"#1e293b":"#fff",color:on?"#fff":"#475569"}}>{label}</button>;};
 const PartSelect=({value,onChange})=>(<select value={value} onChange={e=>onChange("particularite",e.target.value)} style={selS}>{PARTS.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select>);
 const PanelSection=({label,first})=>(<div style={{padding:"5px 10px 4px",background:"#f8fafc",borderTop:first?undefined:"2px solid #e2e8f0",borderBottom:"1px solid #e2e8f0"}}><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px"}}>{label}</span></div>);
-const PanelBtn=({onClick,children,green,blue})=>(<button onClick={onClick} style={{border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,color:(green||blue)?"#fff":"#475569",background:green?"#16a34a":blue?"#2563eb":"#fff",textAlign:"left",display:"flex",flexDirection:"column",alignItems:(green||blue)?"center":"flex-start",gap:1,width:"100%"}} onMouseEnter={e=>e.currentTarget.style.background=green?"#15803d":blue?"#1d4ed8":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=green?"#16a34a":blue?"#2563eb":"#fff"}>{children}</button>);
+const PanelBtn=({onClick,children,green,blue})=>(<button onClick={onClick} style={{border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,color:(green||blue)?"#fff":"#475569",background:green?"#16a34a":blue?"rgb(0,91,245)":"#fff",textAlign:"left",display:"flex",flexDirection:"column",alignItems:(green||blue)?"center":"flex-start",width:"100%"}} onMouseEnter={e=>e.currentTarget.style.background=green?"#15803d":blue?"rgb(0,70,200)":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=green?"#16a34a":blue?"rgb(0,91,245)":"#fff"}>{children}</button>);
 const SmallBtn=({onClick,label})=>(<button onClick={onClick} style={{flex:1,border:"1.5px solid #e2e8f0",background:"#fff",padding:"5px 0",fontSize:11,fontWeight:700,color:"#475569",cursor:"pointer",borderRadius:3}} onMouseEnter={e=>{e.currentTarget.style.background="#1e293b";e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor="#1e293b";}} onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.color="#475569";e.currentTarget.style.borderColor="#e2e8f0";}}>{label}</button>);
+
+const PrioCell=React.memo(({prio,onCommit})=>{
+  const[v,setV]=useState(prio===undefined||prio===null?"":String(prio));
+  const prev=useRef(prio);
+  if(prio!==prev.current){prev.current=prio;setV(prio===undefined||prio===null?"":String(prio));}
+  return(<td style={{textAlign:"center",verticalAlign:"middle",padding:"0 4px"}}><input value={v} onChange={e=>setV(e.target.value)} onFocus={selAll} onBlur={()=>onCommit(v)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();onCommit(v);e.target.blur();}}} maxLength={3} style={prioS} title="Priorité PDF"/></td>);
+});
 
 function PartCell({row,onChange}){
   const[lMax,setLMax]=useState(row.maxH||"");
   const[lNote,setLNote]=useState(row.noteP||"");
-  const pMax=useRef(row.maxH),pNote=useRef(row.noteP);
-  if(row.maxH!==pMax.current){pMax.current=row.maxH;setLMax(row.maxH||"");}
-  if(row.noteP!==pNote.current){pNote.current=row.noteP;setLNote(row.noteP||"");}
+  const rMax=useRef(row.maxH),rNote=useRef(row.noteP);
+  if(row.maxH!==rMax.current){rMax.current=row.maxH;setLMax(row.maxH||"");}
+  if(row.noteP!==rNote.current){rNote.current=row.noteP;setLNote(row.noteP||"");}
   if(row.particularite==="Max heures"){
     if(row.maxH)return <span onClick={()=>{onChange("maxH","");setLMax("");}} style={{fontSize:12,color:"#475569",cursor:"pointer",textDecoration:"underline dotted"}}>{row.maxH} heures max</span>;
-    return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><PartSelect value={row.particularite} onChange={onChange}/><div style={{display:"flex",alignItems:"center",gap:4}}><input type="text" value={lMax} onChange={e=>setLMax(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&lMax.trim()){e.preventDefault();onChange("maxH",lMax.trim());}}} placeholder="h max" maxLength={5} style={{...uSty,width:50,textAlign:"center"}}/>{lMax.trim()&&<span onClick={()=>onChange("maxH",lMax.trim())} style={{fontSize:14,cursor:"pointer",color:"#16a34a",fontWeight:700}}>✔</span>}</div></div>);
+    return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><PartSelect value={row.particularite} onChange={onChange}/><div style={{display:"flex",alignItems:"center",gap:4}}><input value={lMax} onChange={e=>setLMax(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&lMax.trim()){e.preventDefault();onChange("maxH",lMax.trim());}}} placeholder="h max" maxLength={5} style={{...uSty,width:50,textAlign:"center"}}/>{lMax.trim()&&<span onClick={()=>onChange("maxH",lMax.trim())} style={{fontSize:14,cursor:"pointer",color:"#16a34a",fontWeight:700}}>✔</span>}</div></div>);
   }
   if(row.particularite==="Personnalisé"){
     if(row.noteP)return <span onClick={()=>{onChange("noteP","");setLNote("");}} style={{fontSize:12,color:"#475569",cursor:"pointer",textDecoration:"underline dotted"}}>{row.noteP}</span>;
-    return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><PartSelect value={row.particularite} onChange={onChange}/><div style={{display:"flex",alignItems:"center",gap:4}}><input type="text" value={lNote} onChange={e=>setLNote(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&lNote.trim()){e.preventDefault();onChange("noteP",lNote.trim());}}} placeholder="texte..." maxLength={60} style={{...uSty,width:110}}/>{lNote.trim()&&<span onClick={()=>onChange("noteP",lNote.trim())} style={{fontSize:14,cursor:"pointer",color:"#16a34a",fontWeight:700}}>✔</span>}</div></div>);
+    return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><PartSelect value={row.particularite} onChange={onChange}/><div style={{display:"flex",alignItems:"center",gap:4}}><input value={lNote} onChange={e=>setLNote(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&lNote.trim()){e.preventDefault();onChange("noteP",lNote.trim());}}} placeholder="texte..." maxLength={60} style={{...uSty,width:110}}/>{lNote.trim()&&<span onClick={()=>onChange("noteP",lNote.trim())} style={{fontSize:14,cursor:"pointer",color:"#16a34a",fontWeight:700}}>✔</span>}</div></div>);
   }
   return <PartSelect value={row.particularite} onChange={onChange}/>;
 }
 
 function ParamRow({label,value,onChange,unit,step}){
-  return(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}><span style={{fontSize:12,color:"#475569",flex:1}}>{label}</span><div style={{display:"flex",alignItems:"center",gap:6}}><input type="number" value={value} onChange={e=>onChange(e.target.value)} step={step||"0.1"} style={{border:"1px solid #e2e8f0",padding:"4px 12px",fontSize:13,fontWeight:600,color:"#0f172a",width:100,outline:"none",borderRadius:0}}/><span style={{fontSize:11,color:"#94a3b8",minWidth:16}}>{unit}</span></div></div>);
+  return(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:12,color:"#475569",flex:1}}>{label}</span><div style={{display:"flex",alignItems:"center",gap:6}}><input type="number" value={value} onChange={e=>onChange(e.target.value)} onFocus={selAll} step={step||"0.1"} style={{border:"1px solid #e2e8f0",padding:"4px 10px",fontSize:13,fontWeight:600,color:"#0f172a",width:90,outline:"none",borderRadius:4}}/><span style={{fontSize:11,color:"#94a3b8",minWidth:16}}>{unit}</span></div></div>);
+}
+
+function ToggleRow({label,sub,param,setParam}){
+  return(<div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}><div style={{flex:1,paddingRight:16}}><div style={{fontSize:12,color:"#475569",fontWeight:500}}>{label}</div>{sub&&<div style={{fontSize:10,color:"#94a3b8",marginTop:3,lineHeight:1.5}}>{sub}</div>}</div><div style={{display:"flex",gap:8,flexShrink:0}}><ToggleBtn val={true} cur={param} onClick={setParam} label="Activé"/><ToggleBtn val={false} cur={param} onClick={setParam} label="Désactivé"/></div></div>);
+}
+
+function ParamSection({label,color,children}){
+  return(<div style={{marginTop:28,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,overflow:"hidden"}}><div style={{padding:"12px 20px",background:"#fff",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",gap:10}}><div style={{width:10,height:10,borderRadius:3,background:color,flexShrink:0}}/><h3 style={{margin:0,fontSize:13,fontWeight:700,color:"#1e293b",letterSpacing:"0.3px"}}>{label}</h3></div><div style={{padding:"20px"}}>{children}</div></div>);
 }
 
 function StickyHeader({cin,eff,effCalcs,wd,params,cfk,setCfk,cinRefs,updCin,blurCin,onCinKD,onPasteCin,setEv,onPasteEff,sep}){
   const ck=(di,f)=>`cin-${di}-${f}`;
-  return(
-    <div style={{position:"sticky",top:0,zIndex:20,background:"#fff",boxShadow:"0 2px 6px rgba(0,0,0,.12)"}}>
-      <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/>
-        <tbody>
-          <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
-            <td/><td style={{padding:"5px 8px 5px 8px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>HEURES D'OUVERTURE</td><td/>
-            {cin.map((ch,di)=>{
-              const kO=ck(di,"ouverture"),kF=ck(di,"fermeture");
-              return(
-                <td key={di} style={{padding:0,textAlign:"center",verticalAlign:"middle",...blS(di)}}>
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3}}>
-                    <input type="text" value={ch.ouverture} ref={el=>cinRefs.current[kO]=el} onChange={e=>updCin(di,"ouverture",e.target.value)} onBlur={e=>{blurCin(di,"ouverture",e.target.value);setCfk(null);}} onFocus={()=>setCfk(kO)} onClick={e=>e.target.select()} onKeyDown={e=>onCinKD(e,di,"ouverture")} onPaste={e=>onPasteCin(e,di)} maxLength={5} autoComplete="off" style={cinS("#dbeafe",cfk===kO)}/>
-                    <div style={{width:16,height:1,background:"#e2e8f0"}}/>
-                    <input type="text" value={ch.fermeture} ref={el=>cinRefs.current[kF]=el} onChange={e=>updCin(di,"fermeture",e.target.value)} onBlur={e=>{blurCin(di,"fermeture",e.target.value);setCfk(null);}} onFocus={()=>setCfk(kF)} onClick={e=>e.target.select()} onKeyDown={e=>onCinKD(e,di,"fermeture")} onPaste={e=>onPasteCin(e,di)} maxLength={5} autoComplete="off" style={cinS("#fff3e0",cfk===kF)}/>
-                  </div>
-                </td>
-              );
-            })}
-            <td/><td/>
-          </tr>
-          <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
-            <td/><td style={{padding:"5px 8px 5px 8px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>EFFECTIFS</td><td/>
-            {eff.map((ef,di)=>{
-              const{jour:cj,soir:cs}=effCalcs[di];
-              const mj=parseFloat((ef.jour||"").replace(",","."))||0,ms=parseFloat((ef.soir||"").replace(",","."))||0;
-              return(
-                <td key={di} style={{padding:0,textAlign:"center",verticalAlign:"middle",...blS(di)}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-                    {[{f:"jour",cv:cj,mn:mj},{f:"soir",cv:cs,mn:ms}].map(({f,cv,mn},fi)=>{
-                      const exact=mn>0&&eqEff(cv,mn),close=!exact&&mn>0&&params.tolEffOn&&params.tolEff>0&&Math.abs(cv-mn)<=params.tolEff&&cv>0,below=mn>0&&!exact&&!close&&cv<mn,above=mn>0&&!exact&&cv>mn;
-                      return(
-                        <span key={f} style={{display:"flex",alignItems:"center",gap:4}}>
-                          {fi>0&&<div style={{width:1,height:36,background:"#e2e8f0"}}/>}
-                          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                            <span style={{fontSize:9,fontWeight:600,color:"#94a3b8",letterSpacing:"0.4px"}}>{f.toUpperCase()}</span>
-                            <input type="text" value={ef[f]} onChange={e=>setEv(di,f,e.target.value)} maxLength={5} autoComplete="off" style={effS(exact,close,below,above)} placeholder="—" onPaste={e=>onPasteEff(e,di)}/>
-                            <span style={{fontSize:9,fontWeight:700,color:mn===0?"#94a3b8":cv>=mn?"#16a34a":"#dc2626"}}>{cv>0?cv.toString().replace(".",sep):"—"}</span>
-                          </div>
-                        </span>
-                      );
-                    })}
-                  </div>
-                </td>
-              );
-            })}
-            <td/><td/>
-          </tr>
-          <tr style={{borderBottom:"2px solid #c8cdd8",background:"#f8fafc",height:26}}>
-            <td style={TH({color:"#c8cdd8"})}>#</td>
-            <td style={TH({textAlign:"left",paddingLeft:8})}>ÉQUIPIER</td>
-            <td style={TH({borderLeft:"1px solid #c8cdd8"})}>PARTICULARITÉ</td>
-            {DS.map((d,i)=>(<td key={d} style={TH({borderLeft:"1px solid #c8cdd8",borderRight:i===6?"1px solid #c8cdd8":undefined})}><div style={{color:"#475569"}}>{d}</div><div style={{fontWeight:500,fontSize:10,color:"#64748b",marginTop:1}}>{fmt(wd[i],true)}</div></td>))}
-            <td style={TH({color:"#0f172a"})}>TOTAL</td><td style={TH()}/>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  );
+  return(<div style={{position:"sticky",top:0,zIndex:20,background:"#fff",boxShadow:"0 2px 6px rgba(0,0,0,.12)"}}>
+    <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/><tbody>
+      <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
+        <td/><td style={{padding:"5px 8px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>HEURES D'OUVERTURE</td><td/>
+        {cin.map((ch,di)=>{const kO=ck(di,"ouverture"),kF=ck(di,"fermeture");return(<td key={di} style={{padding:0,textAlign:"center",verticalAlign:"middle",...blS(di)}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3}}><input value={ch.ouverture} ref={el=>cinRefs.current[kO]=el} onChange={e=>updCin(di,"ouverture",e.target.value)} onBlur={e=>{blurCin(di,"ouverture",e.target.value);setCfk(null);}} onFocus={e=>{setCfk(kO);selAll(e);}} onKeyDown={e=>onCinKD(e,di,"ouverture")} onPaste={e=>onPasteCin(e,di)} maxLength={5} autoComplete="off" style={cinS("#dbeafe",cfk===kO)}/><div style={{width:16,height:1,background:"#e2e8f0"}}/><input value={ch.fermeture} ref={el=>cinRefs.current[kF]=el} onChange={e=>updCin(di,"fermeture",e.target.value)} onBlur={e=>{blurCin(di,"fermeture",e.target.value);setCfk(null);}} onFocus={e=>{setCfk(kF);selAll(e);}} onKeyDown={e=>onCinKD(e,di,"fermeture")} onPaste={e=>onPasteCin(e,di)} maxLength={5} autoComplete="off" style={cinS("#fff3e0",cfk===kF)}/></div></td>);})}
+        <td/><td/>
+      </tr>
+      <tr style={{borderBottom:"1px solid #e8e8ec",height:72}}>
+        <td/><td style={{padding:"5px 8px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px",whiteSpace:"nowrap",verticalAlign:"middle"}}>EFFECTIFS</td><td/>
+        {eff.map((ef,di)=>{const{jour:cj,soir:cs}=effCalcs[di];const mj=parseFloat((ef.jour||"").replace(",","."))||0,ms=parseFloat((ef.soir||"").replace(",","."))||0;return(<td key={di} style={{padding:0,textAlign:"center",verticalAlign:"middle",...blS(di)}}><div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>{[{f:"jour",cv:cj,mn:mj},{f:"soir",cv:cs,mn:ms}].map(({f,cv,mn},fi)=>{const exact=mn>0&&eqEff(cv,mn),close=!exact&&mn>0&&params.tolEffOn&&params.tolEff>0&&Math.abs(cv-mn)<=params.tolEff&&cv>0,below=mn>0&&!exact&&!close&&cv<mn,above=mn>0&&!exact&&cv>mn;return(<span key={f} style={{display:"flex",alignItems:"center",gap:4}}>{fi>0&&<div style={{width:1,height:36,background:"#e2e8f0"}}/>}<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}><span style={{fontSize:9,fontWeight:600,color:"#94a3b8",letterSpacing:"0.4px"}}>{f.toUpperCase()}</span><input value={ef[f]} onChange={e=>setEv(di,f,e.target.value)} onFocus={selAll} maxLength={5} autoComplete="off" style={effS(exact,close,below,above)} placeholder="—" onPaste={e=>onPasteEff(e,di)}/><span style={{fontSize:9,fontWeight:700,color:mn===0?"#94a3b8":cv>=mn?"#16a34a":"#dc2626"}}>{cv>0?cv.toString().replace(".",sep):"—"}</span></div></span>);})}</div></td>);})}
+        <td/><td/>
+      </tr>
+      <tr style={{borderBottom:"2px solid #c8cdd8",background:"#f8fafc",height:26}}>
+        <td style={TH({color:"#c8cdd8"})}>#</td>
+        <td style={TH({textAlign:"left",paddingLeft:8})}>ÉQUIPIER</td>
+        <td style={TH({borderLeft:"1px solid #c8cdd8"})}>PARTICULARITÉ</td>
+        {DS.map((d,i)=>(<td key={d} style={TH({borderLeft:"1px solid #c8cdd8",borderRight:i===6?"1px solid #c8cdd8":undefined})}><div style={{color:"#475569"}}>{d}</div><div style={{fontWeight:500,fontSize:10,color:"#64748b",marginTop:1}}>{fmt(wd[i],true)}</div></td>))}
+        <td style={TH({color:"#0f172a"})}>TOTAL</td><td style={TH()}/>
+      </tr>
+    </tbody></table>
+  </div>);
 }
 
-// ─── PDF parser (match par numéro de priorité) ────────────────────────────────
 async function parsePDF(file,emps,getDispo,skipPrioZero=true){
   const buf=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf}).promise;
   const allItems=[];
-  for(let p=1;p<=pdf.numPages;p++){
-    const pg=await pdf.getPage(p);
-    (await pg.getTextContent()).items.forEach(it=>{const t=it.str.trim();if(t)allItems.push({t,x:Math.round(it.transform[4]),y:Math.round(it.transform[5])});});
-  }
+  for(let p=1;p<=pdf.numPages;p++){const pg=await pdf.getPage(p);(await pg.getTextContent()).items.forEach(it=>{const t=it.str.trim();if(t)allItems.push({t,x:Math.round(it.transform[4]),y:Math.round(it.transform[5])});});}
   allItems.sort((a,b)=>b.y-a.y||a.x-b.x);
   const rePlage=/^(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/;
   const plageXs=allItems.filter(it=>rePlage.test(it.t)).map(it=>it.x).sort((a,b)=>a-b);
   const clusters=[];
   for(const x of plageXs){const last=clusters[clusters.length-1];if(!last||x-last.max>15)clusters.push({xs:[x],max:x});else{last.xs.push(x);last.max=x;}}
   const colXs=clusters.sort((a,b)=>b.xs.length-a.xs.length).slice(0,7).map(c=>Math.round(c.xs.reduce((s,x)=>s+x,0)/c.xs.length)).sort((a,b)=>a-b);
-
-  // Garder la priorité associée à chaque ligne de dispo
-  const dispItemsRaw=allItems
-    .filter(it=>/^disponibilit[eé]$/i.test(it.t))
-    .map(dispIt=>{
-      const c=allItems.filter(it=>Math.abs(it.y-dispIt.y)<6&&it.x<dispIt.x&&/^\d{1,2}$/.test(it.t)).sort((a,b)=>b.x-a.x);
-      return{dispIt,priorite:c.length?parseInt(c[0].t):9999};
-    })
-    .sort((a,b)=>a.priorite-b.priorite);
-
+  const dispItemsRaw=allItems.filter(it=>/^disponibilit[eé]$/i.test(it.t)).map(dispIt=>{const c=allItems.filter(it=>Math.abs(it.y-dispIt.y)<6&&it.x<dispIt.x&&/^\d{1,2}$/.test(it.t)).sort((a,b)=>b.x-a.x);return{dispIt,priorite:c.length?parseInt(c[0].t):9999};}).sort((a,b)=>a.priorite-b.priorite);
   const dispoAvecPrio=dispItemsRaw.map(({dispIt,priorite})=>{
     const dispo=DAYS.map(()=>({debut:"",fin:""}));
     allItems.filter(it=>Math.abs(it.y-dispIt.y)<6&&rePlage.test(it.t)).forEach(it=>{
       const m=it.t.match(rePlage);let best=0,bestDist=Infinity;
       colXs.forEach((cx,i)=>{const d=Math.abs(it.x-cx);if(d<bestDist){bestDist=d;best=i;}});
       const[dh,dm]=m[1].split(":").map(Number),[fh,fm]=m[2].split(":").map(Number);
-      const finH=fh+fm/60;
-      dispo[best]={debut:m[1],fin:finH<dh+dm/60?toStr(finH+24):m[2]};
+      const finH=fh+fm/60;dispo[best]={debut:m[1],fin:finH<dh+dm/60?toStr(finH+24):m[2]};
     });
     return{dispo,priorite};
   });
-
   let matched=0;
   const newEmps=emps.map(e=>({...e,dispo:getDispo(e).map(d=>({...d}))}));
-
   for(const{dispo,priorite}of dispoAvecPrio){
     if(skipPrioZero&&String(priorite)==="0")continue;
-    // Chercher l'employé dont le numéro de priorité correspond
     const idx=newEmps.findIndex(e=>!isBlocked(e.particularite)&&String(e.prio)===String(priorite));
     if(idx>=0){newEmps[idx]={...newEmps[idx],dispo};matched++;}
   }
@@ -246,41 +228,26 @@ function App(){
   const[confirmHoraire,setConfirmHoraire]=useState(false);
   const[confirmDispo,setConfirmDispo]=useState(false);
   const[showReequMenu,setShowReequMenu]=useState(false);
-  const refs=useRef({});
-  const cinRefs=useRef({});
-  const importRef=useRef(null);
+  const refs=useRef({});const cinRefs=useRef({});const importRef=useRef(null);
   const hist=useRef([]),fut=useRef([]),before=useRef(null);
   const cinHist=useRef([]),cinFut=useRef([]),cinBefore=useRef(null);
 
-  useEffect(()=>{
-    (async()=>{
-      const[sc,se,sp]=await Promise.all([stoLoad(SK.cin),stoLoad(SK.eff),stoLoad(SK.parts)]);
-      if(sc&&sc.length===7)setCin(sc);
-      if(se&&se.length===7)setEff(se);
-      if(sp)setEmps(l=>l.map(e=>{const p=sp[e.id];return p?{...e,particularite:p.particularite||"",maxH:p.maxH||"",noteP:p.noteP||"",prio:p.prio!==undefined?p.prio:e.prio}:e;}));
-      setSavedOk(await stoSave("horaire:test","ok"));
-      setLoaded(true);
-    })();
-  },[]);
+  useEffect(()=>{(async()=>{
+    const[sc,se,sp]=await Promise.all([stoLoad(SK.cin),stoLoad(SK.eff),stoLoad(SK.parts)]);
+    if(sc&&sc.length===7)setCin(sc);if(se&&se.length===7)setEff(se);
+    if(sp)setEmps(l=>l.map(e=>{const p=sp[e.id];return p?{...e,particularite:p.particularite||"",maxH:p.maxH||"",noteP:p.noteP||"",prio:p.prio!==undefined?p.prio:e.prio}:e;}));
+    setSavedOk(await stoSave("horaire:test","ok"));setLoaded(true);
+  })();},[]);
   useEffect(()=>{if(loaded)stoSave(SK.cin,cin);},[cin,loaded]);
   useEffect(()=>{if(loaded)stoSave(SK.eff,eff);},[eff,loaded]);
-  useEffect(()=>{
-    if(!loaded)return;
-    const p={};emps.forEach(e=>{p[e.id]={particularite:e.particularite,maxH:e.maxH,noteP:e.noteP,prio:e.prio};});
-    stoSave(SK.parts,p);
-  },[emps,loaded]);
+  useEffect(()=>{if(!loaded)return;const p={};emps.forEach(e=>{p[e.id]={particularite:e.particularite,maxH:e.maxH,noteP:e.noteP,prio:e.prio};});stoSave(SK.parts,p);},[emps,loaded]);
 
   const sep=params.sepDecimal;
   const fmtH=useCallback(h=>fmtDec(h,sep),[sep]);
   const getDispo=useCallback(emp=>{
     const d=emp.dispo&&emp.dispo.length===7?emp.dispo:mkDispo();
     if(!params.dispoFinCorrection)return d;
-    return d.map(day=>{
-      if(!day.fin)return day;
-      const h=toH(day.fin);
-      if(h!==null&&h<params.dispoFinSeuil)return{...day,fin:toStr(h+12)};
-      return day;
-    });
+    return d.map(day=>{if(!day.fin)return day;const h=toH(day.fin);return h!==null&&h<params.dispoFinSeuil?{...day,fin:toStr(h+12)}:day;});
   },[params.dispoFinCorrection,params.dispoFinSeuil]);
   const getMaxH=useCallback(emp=>emp.particularite==="Max heures"&&emp.maxH?parseFloat(emp.maxH):params.genMaxHeures,[params.genMaxHeures]);
   const empIdx=useMemo(()=>{const m={};emps.forEach((e,i)=>m[e.id]=i);return m;},[emps]);
@@ -290,32 +257,21 @@ function App(){
   const effCalcs=useMemo(()=>DAYS.map((_,di)=>{
     const ouv=toH(cin[di].ouverture);if(ouv===null)return{jour:0,soir:0};
     const thr=ouv+params.jourDecalage;let jour=0,soir=0;
-    emps.forEach(row=>{
-      if(isBlocked(row.particularite))return;
-      const d=toH(row.days[di].debut),f=toH(row.days[di].fin);
-      if(d!==null){if(d<thr)jour+=1;else if(d<params.jourLimite)jour+=params.jourPoids;}
-      if(f!==null){if(f>=params.soirDebut&&f<=params.soirLimite)soir+=params.soirPoids;else if(f>params.soirLimite)soir+=1;}
-    });
+    emps.forEach(row=>{if(isBlocked(row.particularite))return;const d=toH(row.days[di].debut),f=toH(row.days[di].fin);if(d!==null){if(d<thr)jour+=1;else if(d<params.jourLimite)jour+=params.jourPoids;}if(f!==null){if(f>=params.soirDebut&&f<=params.soirLimite)soir+=params.soirPoids;else if(f>params.soirLimite)soir+=1;}});
     return{jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};
   }),[emps,cin,params.jourDecalage,params.jourLimite,params.jourPoids,params.soirDebut,params.soirLimite,params.soirPoids]);
-
   const deficits=useMemo(()=>DAYS.map((_,di)=>{
-    const tJ=parseFloat((eff[di].jour||"").replace(",","."))||0;
-    const tS=parseFloat((eff[di].soir||"").replace(",","."))||0;
+    const tJ=parseFloat((eff[di].jour||"").replace(",","."))||0,tS=parseFloat((eff[di].soir||"").replace(",","."))||0;
     const dJ=tJ>0?Math.max(0,Math.round((tJ-effCalcs[di].jour)*10)/10):0;
     const dS=tS>0?Math.max(0,Math.round((tS-effCalcs[di].soir)*10)/10):0;
     return{jour:dJ,soir:dS,hasDeficit:dJ>EPS||dS>EPS};
   }),[eff,effCalcs]);
-
   const wd=useMemo(()=>DAYS.map((_,i)=>addD(ws,i)),[ws]);
   const wl=useMemo(()=>`${fmt(ws)} au ${fmt(addD(ws,6))}`,[ws]);
   const iw=useMemo(()=>isoW(ws),[ws]);
   const getFerEff=useCallback(ferStr=>{
-    if(!params.genFermetureComptoir)return ferStr;
-    const fH=toH(ferStr);if(fH===null)return ferStr;
-    if(fH>=params.genSeuilHaut)return toStr(params.genComptoirHaut);
-    if(fH>=params.genSeuilBas)return toStr(params.genComptoirBas);
-    return ferStr;
+    if(!params.genFermetureComptoir)return ferStr;const fH=toH(ferStr);if(fH===null)return ferStr;
+    if(fH>=params.genSeuilHaut)return toStr(params.genComptoirHaut);if(fH>=params.genSeuilBas)return toStr(params.genComptoirBas);return ferStr;
   },[params.genFermetureComptoir,params.genSeuilHaut,params.genComptoirHaut,params.genSeuilBas,params.genComptoirBas]);
 
   const cap=l=>{if(before.current===null)before.current=JSON.stringify(l);};
@@ -346,28 +302,15 @@ function App(){
     try{const{newEmps,matched}=await parsePDF(file,emps,getDispo,params.dispoSkipPrioZero);setEmps(newEmps);setImportMsg(`✓ ${matched} employé${matched!==1?"s":""} importé${matched!==1?"s":""}`);setTimeout(()=>setImportMsg(null),5000);setPage("dispo");}
     catch(err){setImportMsg("Erreur : "+err.message);setTimeout(()=>setImportMsg(null),5000);}
   };
-  const effacerHoraire=()=>{
-    if(!confirmHoraire){setConfirmHoraire(true);setTimeout(()=>setConfirmHoraire(false),3000);return;}
-    cap(emps);setEmps(l=>l.map(e=>({...e,days:DAYS.map(()=>({debut:"",fin:""}))})));commit();
-    setConfirmHoraire(false);showMsg("Horaire effacé");
-  };
-  const effacerDispos=()=>{
-    if(!confirmDispo){setConfirmDispo(true);setTimeout(()=>setConfirmDispo(false),3000);return;}
-    setEmps(l=>l.map(e=>({...e,dispo:mkDispo()})));
-    setConfirmDispo(false);showMsg("Disponibilités effacées");
-  };
+  const effacerHoraire=()=>{if(!confirmHoraire){setConfirmHoraire(true);setTimeout(()=>setConfirmHoraire(false),3000);return;}cap(emps);setEmps(l=>l.map(e=>({...e,days:DAYS.map(()=>({debut:"",fin:""}))})));commit();setConfirmHoraire(false);showMsg("Horaire effacé");};
+  const effacerDispos=()=>{if(!confirmDispo){setConfirmDispo(true);setTimeout(()=>setConfirmDispo(false),3000);return;}setEmps(l=>l.map(e=>({...e,dispo:mkDispo()})));setConfirmDispo(false);showMsg("Disponibilités effacées");};
 
-  const clearOnType=useRef(new Set());
   const rk=(eid,di,f)=>`${eid}-${di}-${f}`;
-  const ck=(di,f)=>`cin-${di}-${f}`;
   const rd=(eid,di,f)=>`d-${eid}-${di}-${f}`;
+  const ck=(di,f)=>`cin-${di}-${f}`;
   const focusRef=k=>{if(refs.current[k])refs.current[k].focus();};
   const focusCinRef=k=>{if(k&&cinRefs.current[k])cinRefs.current[k].focus();};
-  const focusNext=(eid,di,f)=>{
-    if(f==="debut")return focusRef(rk(eid,di,"fin"));
-    if(di<6)return focusRef(rk(eid,di+1,"debut"));
-    const nx=emps[empIdx[eid]+1];if(nx)focusRef(rk(nx.id,0,"debut"));
-  };
+  const focusNext=(eid,di,f)=>{if(f==="debut")return focusRef(rk(eid,di,"fin"));if(di<6)return focusRef(rk(eid,di+1,"debut"));const nx=emps[empIdx[eid]+1];if(nx)focusRef(rk(nx.id,0,"debut"));};
   const onKD=(e,eid,di,f)=>{
     const v=e.target.value;
     if(e.ctrlKey&&e.shiftKey&&e.key==="Z"){e.preventDefault();redo();return;}
@@ -378,9 +321,6 @@ function App(){
     if(e.key==="ArrowLeft"){e.preventDefault();if(di>0)focusRef(rk(eid,di-1,f));return;}
     if(e.key==="Enter"){e.preventDefault();blurDay(eid,di,f,v);setTimeout(()=>focusNext(eid,di,f),0);return;}
     if((e.key==="Delete"||e.key==="Backspace")&&v){e.preventDefault();delDay(eid,di,f);}
-    if(e.key.length===1&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&clearOnType.current.has(rk(eid,di,f))){
-      clearOnType.current.delete(rk(eid,di,f));e.preventDefault();updDay(eid,di,f,e.key);return;
-    }
   };
   const onCinKD=(e,di,f)=>{
     const v=e.target.value;
@@ -393,38 +333,7 @@ function App(){
     if(e.key==="Enter"){e.preventDefault();blurCin(di,f,v);setTimeout(()=>focusCinRef(f==="ouverture"?ck(di,"fermeture"):di<6?ck(di+1,"ouverture"):null),0);return;}
     if((e.key==="Delete"||e.key==="Backspace")&&v){e.preventDefault();delCin(di,f);}
   };
-
-  const getCell=(row,c,il,isF)=>{if(!row)return"";const val=il?row[c*2+(isF?1:0)]:row[c];return val?val.trim():"";};
-  const splitPaste=(text,di)=>{const rows=text.trimEnd().split("\n").map(r=>r.split("\t"));const f=filterEmpty(rows);return{filtered:f,interleaved:f[0].length>=(7-di)*2};};
-  const onPaste=(e,eid,di)=>{
-    const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
-    const{filtered:f,interleaved:il}=splitPaste(text,di);const s=empIdx[eid];
-    setEmps(l=>{cap(l);const next=l.map((x,ei)=>{const ri=ei-s;if(ri<0)return x;let dR,fR;if(il){if(ri>=f.length)return x;dR=fR=f[ri];}else{const b=ri*2;if(b>=f.length)return x;dR=f[b];fR=f[b+1]||[];}const nd=x.days.map((day,dj)=>{if(dj<di)return day;const c=dj-di;return{debut:normT(getCell(dR,c,il,false))||day.debut,fin:normT(getCell(il?dR:fR,c,il,true))||day.fin};});return{...x,days:nd};});commit();return next;});
-  };
-  const onPasteDispo=(e,eid,di)=>{
-    const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
-    const{filtered:f,interleaved:il}=splitPaste(text,di);const s=empIdx[eid];
-    const rawDispo=emp=>emp.dispo&&emp.dispo.length===7?emp.dispo:mkDispo();
-    setEmps(l=>l.map((x,ei)=>{const ri=ei-s;if(ri<0)return x;let dR,fR;if(il){if(ri>=f.length)return x;dR=fR=f[ri];}else{const b=ri*2;if(b>=f.length)return x;dR=f[b];fR=f[b+1]||[];}const nd=rawDispo(x).map((d,dj)=>{if(dj<di)return d;const c=dj-di;return{debut:normT(getCell(dR,c,il,false))||d.debut,fin:normT(getCell(il?dR:fR,c,il,true))||d.fin};});return{...x,dispo:nd};}));
-  };
-  const onPasteCin=(e,di)=>{
-    const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
-    const f=filterEmpty(text.trimEnd().split("\n").map(r=>r.split("\t")));
-    const oR=f[0]||[],fR=f[1]||[];capCin(cin);
-    setCin(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;return{ouverture:normT((oR[c]||"").trim())||x.ouverture,fermeture:normT((fR[c]||"").trim())||x.fermeture};}));commitCin();
-  };
-  const onPasteEff=(e,di)=>{
-    const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();
-    const f=filterEmpty(text.trimEnd().split("\n").map(r=>r.split("\t")));
-    const il=f[0].length>=(7-di)*2,jR=f[0]||[],sR=f[1]||[];
-    setEff(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;return{jour:il?((jR[c*2]||"").trim()):((jR[c]||"").trim())||x.jour,soir:il?((jR[c*2+1]||"").trim()):((sR[c]||"").trim())||x.soir};}));
-  };
-
-  const focusNextDispo=(eid,di,f)=>{
-    if(f==="debut")return focusRef(rd(eid,di,"fin"));
-    if(di<6)return focusRef(rd(eid,di+1,"debut"));
-    const nx=emps[empIdx[eid]+1];if(nx)focusRef(rd(nx.id,0,"debut"));
-  };
+  const focusNextDispo=(eid,di,f)=>{if(f==="debut")return focusRef(rd(eid,di,"fin"));if(di<6)return focusRef(rd(eid,di+1,"debut"));const nx=emps[empIdx[eid]+1];if(nx)focusRef(rd(nx.id,0,"debut"));};
   const onKDDispo=(e,eid,di,f)=>{
     const v=e.target.value;
     if(e.key==="ArrowDown"){e.preventDefault();const nx=emps[empIdx[eid]+1];if(nx)focusRef(rd(nx.id,di,f));return;}
@@ -435,47 +344,31 @@ function App(){
     if((e.key==="Delete"||e.key==="Backspace")&&v){e.preventDefault();updDispo(eid,di,f,"");}
   };
 
-  // ── Day cache ─────────────────────────────────────────────────────────────
+  const getCell=(row,c,il,isF)=>{if(!row)return"";const val=il?row[c*2+(isF?1:0)]:row[c];return val?val.trim():"";};
+  const splitPaste=(text,di)=>{const rows=text.trimEnd().split("\n").map(r=>r.split("\t"));const f=filterEmpty(rows);return{filtered:f,interleaved:f[0].length>=(7-di)*2};};
+  const onPaste=(e,eid,di)=>{const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();const{filtered:f,interleaved:il}=splitPaste(text,di);const s=empIdx[eid];setEmps(l=>{cap(l);const next=l.map((x,ei)=>{const ri=ei-s;if(ri<0)return x;let dR,fR;if(il){if(ri>=f.length)return x;dR=fR=f[ri];}else{const b=ri*2;if(b>=f.length)return x;dR=f[b];fR=f[b+1]||[];}const nd=x.days.map((day,dj)=>{if(dj<di)return day;const c=dj-di;return{debut:normT(getCell(dR,c,il,false))||day.debut,fin:normT(getCell(il?dR:fR,c,il,true))||day.fin};});return{...x,days:nd};});commit();return next;});};
+  const onPasteDispo=(e,eid,di)=>{const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();const{filtered:f,interleaved:il}=splitPaste(text,di);const s=empIdx[eid];const rawDispo=emp=>emp.dispo&&emp.dispo.length===7?emp.dispo:mkDispo();setEmps(l=>l.map((x,ei)=>{const ri=ei-s;if(ri<0)return x;let dR,fR;if(il){if(ri>=f.length)return x;dR=fR=f[ri];}else{const b=ri*2;if(b>=f.length)return x;dR=f[b];fR=f[b+1]||[];}const nd=rawDispo(x).map((d,dj)=>{if(dj<di)return d;const c=dj-di;return{debut:normT(getCell(dR,c,il,false))||d.debut,fin:normT(getCell(il?dR:fR,c,il,true))||d.fin};});return{...x,dispo:nd};}));};
+  const onPasteCin=(e,di)=>{const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();const f=filterEmpty(text.trimEnd().split("\n").map(r=>r.split("\t")));const oR=f[0]||[],fR=f[1]||[];capCin(cin);setCin(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;return{ouverture:normT((oR[c]||"").trim())||x.ouverture,fermeture:normT((fR[c]||"").trim())||x.fermeture};}));commitCin();};
+  const onPasteEff=(e,di)=>{const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();const f=filterEmpty(text.trimEnd().split("\n").map(r=>r.split("\t")));const il=f[0].length>=(7-di)*2,jR=f[0]||[],sR=f[1]||[];setEff(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;return{jour:il?((jR[c*2]||"").trim()):((jR[c]||"").trim())||x.jour,soir:il?((jR[c*2+1]||"").trim()):((sR[c]||"").trim())||x.soir};}));};
+
   const mkDayCache=(di,newDays)=>{
     const ch=cin[di];if(!ch.ouverture||!ch.fermeture)return null;
     const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture);if(ouvH===null||ferH===null)return null;
-    const ferEff=toH(getFerEff(ch.fermeture));
-    const thr=ouvH+params.jourDecalage;
-    const jT=parseFloat((eff[di].jour||"").replace(",","."))||0;
-    const sT=parseFloat((eff[di].soir||"").replace(",","."))||0;
+    const ferEff=toH(getFerEff(ch.fermeture)),thr=ouvH+params.jourDecalage;
+    const jT=parseFloat((eff[di].jour||"").replace(",","."))||0,sT=parseFloat((eff[di].soir||"").replace(",","."))||0;
     let ferCin=0,ouvCnt=0,jour=0,soir=0;
-    for(let i=0;i<emps.length;i++){
-      if(isBlocked(emps[i].particularite))continue;
-      const d=toH(newDays[i][di].debut),f=toH(newDays[i][di].fin);
-      if(f!==null&&f>=ferH-EPS)ferCin++;
-      if(d!==null&&d<=ouvH+EPS)ouvCnt++;
-      if(d!==null){if(d<thr)jour+=1;else if(d<params.jourLimite)jour+=params.jourPoids;}
-      if(f!==null){if(f>=params.soirDebut&&f<=params.soirLimite)soir+=params.soirPoids;else if(f>params.soirLimite)soir+=1;}
-    }
+    for(let i=0;i<emps.length;i++){if(isBlocked(emps[i].particularite))continue;const d=toH(newDays[i][di].debut),f=toH(newDays[i][di].fin);if(f!==null&&f>=ferH-EPS)ferCin++;if(d!==null&&d<=ouvH+EPS)ouvCnt++;if(d!==null){if(d<thr)jour+=1;else if(d<params.jourLimite)jour+=params.jourPoids;}if(f!==null){if(f>=params.soirDebut&&f<=params.soirLimite)soir+=params.soirPoids;else if(f>params.soirLimite)soir+=1;}}
     return{ouvH,ferH,ferEff,thr,jT,sT,jourRond:jT>0&&Number.isInteger(jT),soirRond:sT>0&&Number.isInteger(sT),ferCin,ouvCnt,jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};
   };
-  const updCache=(c,debut,fin)=>{
-    const d=toH(debut),f=toH(fin);
-    if(d!==null){if(d<=c.ouvH+EPS)c.ouvCnt++;if(d<c.thr)c.jour+=1;else if(d<params.jourLimite)c.jour+=params.jourPoids;c.jour=Math.round(c.jour*10)/10;}
-    if(f!==null){if(f>=c.ferH-EPS)c.ferCin++;if(f>=params.soirDebut&&f<=params.soirLimite)c.soir+=params.soirPoids;else if(f>params.soirLimite)c.soir+=1;c.soir=Math.round(c.soir*10)/10;}
-  };
+  const updCache=(c,debut,fin)=>{const d=toH(debut),f=toH(fin);if(d!==null){if(d<=c.ouvH+EPS)c.ouvCnt++;if(d<c.thr)c.jour+=1;else if(d<params.jourLimite)c.jour+=params.jourPoids;c.jour=Math.round(c.jour*10)/10;}if(f!==null){if(f>=c.ferH-EPS)c.ferCin++;if(f>=params.soirDebut&&f<=params.soirLimite)c.soir+=params.soirPoids;else if(f>params.soirLimite)c.soir+=1;c.soir=Math.round(c.soir*10)/10;}};
 
   const _assigner=(newDays,ei,di,cache,wt,plus=false)=>{
-    if(!cache)return false;
-    const emp=emps[ei];if(isBlocked(emp.particularite))return false;
-    if(newDays[ei][di].debut&&newDays[ei][di].fin)return false;
+    if(!cache)return false;const emp=emps[ei];if(isBlocked(emp.particularite))return false;if(newDays[ei][di].debut&&newDays[ei][di].fin)return false;
     const{ouvH,ferH,ferEff,thr,jT,sT,jourRond,soirRond}=cache;
-    const disp=getDispo(emp);
-    const dH=disp[di].debut?toH(disp[di].debut):null,fH=disp[di].fin?toH(disp[di].fin):null;
+    const disp=getDispo(emp);const dH=disp[di].debut?toH(disp[di].debut):null,fH=disp[di].fin?toH(disp[di].fin):null;
     if(dH===null&&fH===null)return false;
     const empDebut=dH!==null?dH:ouvH,empFin=fH!==null?fH:ferH;
-    const effOK=(dv,fv)=>{
-      if(!jT&&!sT)return true;
-      let j=cache.jour,s=cache.soir;
-      if(dv!==null){if(dv<thr)j+=1;else if(dv<params.jourLimite)j+=params.jourPoids;}
-      if(fv!==null){if(fv>=params.soirDebut&&fv<=params.soirLimite)s+=params.soirPoids;else if(fv>params.soirLimite)s+=1;}
-      return(!jT||j<=jT)&&(!sT||s<=sT);
-    };
+    const effOK=(dv,fv)=>{if(!jT&&!sT)return true;let j=cache.jour,s=cache.soir;if(dv!==null){if(dv<thr)j+=1;else if(dv<params.jourLimite)j+=params.jourPoids;}if(fv!==null){if(fv>=params.soirDebut&&fv<=params.soirLimite)s+=params.soirPoids;else if(fv>params.soirLimite)s+=1;}return(!jT||j<=jT)&&(!sT||s<=sT);};
     const peutOuv=empDebut<=params.genSeuilOuverture+EPS;
     const dOuv=params.genOuvertureFlexible&&peutOuv?toStr(cache.ouvCnt>=params.genNbOuverture?ouvH+params.genDelaiApresOuverture:ouvH):toStr(Math.max(empDebut,ouvH));
     const opts=plus?[
@@ -490,329 +383,167 @@ function App(){
       {d:dOuv,f:toStr(18),fc:false,no:true},
     ];
     for(const o of opts){
-      if(o.s14&&jourRond)continue;if(o.s20&&soirRond)continue;
-      if(o.no&&!peutOuv)continue;
-      const dv=toH(o.d),fv=toH(o.f);
-      const dc=params.genOuvertureFlexible&&peutOuv&&o.no?ouvH:empDebut;
-      if(dc>dv+EPS)continue;if(empFin<fv-EPS)continue;
-      if(o.fc&&cache.ferCin>=params.genNbFermetureCinema)continue;
-      const h=calcH(o.d,o.f);if(h<params.genMinQuart)continue;
-      if(!effOK(dv,fv))continue;
-      if(wt[ei]+h>getMaxH(emp))continue;
+      if(o.s14&&jourRond)continue;if(o.s20&&soirRond)continue;if(o.no&&!peutOuv)continue;
+      const dv=toH(o.d),fv=toH(o.f);const dc=params.genOuvertureFlexible&&peutOuv&&o.no?ouvH:empDebut;
+      if(dc>dv+EPS)continue;if(empFin<fv-EPS)continue;if(o.fc&&cache.ferCin>=params.genNbFermetureCinema)continue;
+      const h=calcH(o.d,o.f);if(h<params.genMinQuart)continue;if(!effOK(dv,fv))continue;if(wt[ei]+h>getMaxH(emp))continue;
       newDays[ei][di]={debut:o.d,fin:o.f};wt[ei]+=h;updCache(cache,o.d,o.f);return true;
     }
     return false;
   };
+  const assignerUnJour=(newDays,ei,di)=>{const cache=mkDayCache(di,newDays);if(!cache)return false;const wt=[];wt[ei]=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);return _assigner(newDays,ei,di,cache,wt,false);};
 
-  const assignerUnJour=(newDays,ei,di)=>{
-    const cache=mkDayCache(di,newDays);if(!cache)return false;
-    const wt=[];wt[ei]=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
-    return _assigner(newDays,ei,di,cache,wt,false);
-  };
-
-  const genererTous=()=>{
-    const newDays=emps.map(e=>e.days.map(d=>({...d})));
-    const wt=emps.map((_,ei)=>newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0));
-    const caches=DAYS.map((_,di)=>mkDayCache(di,newDays));
-    let assigns=0;
-    for(let ei=0;ei<emps.length;ei++)for(let di=0;di<7;di++)if(_assigner(newDays,ei,di,caches[di],wt,false))assigns++;
-    cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();
-    showMsg(`${assigns} quart${assigns!==1?"s":""} assigné${assigns!==1?"s":""}`);setPage("horaire");
-  };
-
-  const runPrioriteFermeture=(newDays)=>{
+  const runPrioriteFermeture=newDays=>{
     let assigns=0;
     for(let di=0;di<7;di++){
-      const ch=cin[di];if(!ch.ouverture||!ch.fermeture)continue;
-      const ferH=toH(ch.fermeture);
-      let covered=false;
-      for(let ei=0;ei<emps.length;ei++){const f=toH(newDays[ei][di].fin);if(f!==null&&f>=ferH-EPS){covered=true;break;}}
-      if(covered)continue;
+      const ch=cin[di];if(!ch.ouverture||!ch.fermeture)continue;const ferH=toH(ch.fermeture);
+      if(newDays.some((_,i)=>{const f=toH(newDays[i][di].fin);return f!==null&&f>=ferH-EPS;}))continue;
       let prio=-1;
-      for(let ei=0;ei<emps.length;ei++){
-        const emp=emps[ei];if(isBlocked(emp.particularite))continue;
-        if(newDays[ei][di].debut||newDays[ei][di].fin)continue;
-        const disp=getDispo(emp);const df=disp[di].fin?toH(disp[di].fin):null;
-        if(df===null||df<ferH-EPS)continue;
-        const h=calcH("18:00",toStr(ferH));
-        const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
-        if(h<params.genMinQuart||wt+h>getMaxH(emp))continue;
-        newDays[ei][di]={debut:"18:00",fin:toStr(ferH)};prio=ei;assigns++;break;
-      }
+      for(let ei=0;ei<emps.length;ei++){const emp=emps[ei];if(isBlocked(emp.particularite))continue;if(newDays[ei][di].debut||newDays[ei][di].fin)continue;const disp=getDispo(emp),df=disp[di].fin?toH(disp[di].fin):null;if(df===null||df<ferH-EPS)continue;const h=calcH("18:00",toStr(ferH));const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);if(h<params.genMinQuart||wt+h>getMaxH(emp))continue;newDays[ei][di]={debut:"18:00",fin:toStr(ferH)};prio=ei;assigns++;break;}
       if(prio<0)continue;
-      for(let ei=emps.length-1;ei>=0;ei--){
-        if(ei===prio||isBlocked(emps[ei].particularite))continue;
-        const day=newDays[ei][di];if(!day.debut||!day.fin)continue;
-        if(toH(day.fin)<params.soirDebut-EPS)continue;
-        if(toH(day.debut)<18-EPS){if(calcH(day.debut,"18:00")>=params.genMinQuart)newDays[ei][di]={debut:day.debut,fin:"18:00"};else newDays[ei][di]={debut:"",fin:""};}
-        else newDays[ei][di]={debut:"",fin:""};
-        break;
-      }
+      for(let ei=emps.length-1;ei>=0;ei--){if(ei===prio||isBlocked(emps[ei].particularite))continue;const day=newDays[ei][di];if(!day.debut||!day.fin)continue;if(toH(day.fin)<params.soirDebut-EPS)continue;if(toH(day.debut)<18-EPS){if(calcH(day.debut,"18:00")>=params.genMinQuart)newDays[ei][di]={debut:day.debut,fin:"18:00"};else newDays[ei][di]={debut:"",fin:""};} else newDays[ei][di]={debut:"",fin:""};break;}
     }
     return assigns;
   };
 
-  const genererTousPlus=()=>{
-    const newDays=emps.map(e=>e.days.map(d=>({...d})));
-    const wt=emps.map((_,ei)=>newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0));
-    const caches=DAYS.map((_,di)=>mkDayCache(di,newDays));
-    let assigns=0;
-    for(let ei=0;ei<emps.length;ei++)for(let di=0;di<7;di++)if(_assigner(newDays,ei,di,caches[di],wt,true))assigns++;
-    assigns+=runPrioriteFermeture(newDays);
-    cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();
-    showMsg(`${assigns} quarts assignés`);setPage("horaire");
-  };
+  const genererTous=()=>{const newDays=emps.map(e=>e.days.map(d=>({...d})));const wt=emps.map((_,ei)=>newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0));const caches=DAYS.map((_,di)=>mkDayCache(di,newDays));let assigns=0;for(let ei=0;ei<emps.length;ei++)for(let di=0;di<7;di++)if(_assigner(newDays,ei,di,caches[di],wt,false))assigns++;cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();showMsg(`${assigns} quart${assigns!==1?"s":""} assigné${assigns!==1?"s":""}`);setPage("horaire");};
+  const genererTousPlus=()=>{const newDays=emps.map(e=>e.days.map(d=>({...d})));const wt=emps.map((_,ei)=>newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0));const caches=DAYS.map((_,di)=>mkDayCache(di,newDays));let assigns=0;for(let ei=0;ei<emps.length;ei++)for(let di=0;di<7;di++)if(_assigner(newDays,ei,di,caches[di],wt,true))assigns++;assigns+=runPrioriteFermeture(newDays);cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();showMsg(`${assigns} quarts assignés`);setPage("horaire");};
+  const genererFermeturePrioritaire=()=>{const newDays=emps.map(e=>e.days.map(d=>({...d})));const assigns=runPrioriteFermeture(newDays);cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();showMsg(`${assigns} fermeture${assigns!==1?"s":""} assignée${assigns!==1?"s":""}`);setPage("horaire");};
 
-  const genererRééquilibrerJour=(targetDi)=>{
+  const genererRééquilibrerJour=targetDi=>{
     const newDays=emps.map(e=>e.days.map(d=>({...d})));let changes=0;
     const getEffDay=di=>{const c=mkDayCache(di,newDays);return c?{jour:c.jour,soir:c.soir}:{jour:0,soir:0};};
-    const tJ=parseFloat((eff[targetDi].jour||"").replace(",","."))||0;
-    const tS=parseFloat((eff[targetDi].soir||"").replace(",","."))||0;
+    const tJ=parseFloat((eff[targetDi].jour||"").replace(",","."))||0,tS=parseFloat((eff[targetDi].soir||"").replace(",","."))||0;
     const isUnder=()=>{const c=getEffDay(targetDi);return(tJ>0&&c.jour<tJ-EPS)||(tS>0&&c.soir<tS-EPS);};
-    const tenterRemplacement=(srcDi,excludeEi)=>{
-      const srcTJ=parseFloat((eff[srcDi].jour||"").replace(",","."))||0;
-      const srcTS=parseFloat((eff[srcDi].soir||"").replace(",","."))||0;
-      const sc0=getEffDay(srcDi);
-      if(!((srcTJ>0&&sc0.jour<srcTJ-EPS)||(srcTS>0&&sc0.soir<srcTS-EPS)))return true;
+    const tenterRemplacement=(srcDi,excl)=>{
+      const srcTJ=parseFloat((eff[srcDi].jour||"").replace(",","."))||0,srcTS=parseFloat((eff[srcDi].soir||"").replace(",","."))||0;
+      const sc0=getEffDay(srcDi);if(!((srcTJ>0&&sc0.jour<srcTJ-EPS)||(srcTS>0&&sc0.soir<srcTS-EPS)))return true;
       let anyFound=false;
-      while(true){
-        const sc=getEffDay(srcDi);
-        if(!((srcTJ>0&&sc.jour<srcTJ-EPS)||(srcTS>0&&sc.soir<srcTS-EPS)))break;
-        let found=false;
-        for(let ri=0;ri<emps.length&&!found;ri++){
-          if(ri===excludeEi||isBlocked(emps[ri].particularite))continue;
-          if(newDays[ri][srcDi].debut||newDays[ri][srcDi].fin)continue;
-          const rd2=getDispo(emps[ri]);if(!rd2[srcDi].debut&&!rd2[srcDi].fin)continue;
-          if(assignerUnJour(newDays,ri,srcDi)){found=true;anyFound=true;}
-        }
-        if(!found)break;
-      }
+      while(true){const sc=getEffDay(srcDi);if(!((srcTJ>0&&sc.jour<srcTJ-EPS)||(srcTS>0&&sc.soir<srcTS-EPS)))break;let found=false;for(let ri=0;ri<emps.length&&!found;ri++){if(ri===excl||isBlocked(emps[ri].particularite))continue;if(newDays[ri][srcDi].debut||newDays[ri][srcDi].fin)continue;const rd2=getDispo(emps[ri]);if(!rd2[srcDi].debut&&!rd2[srcDi].fin)continue;if(assignerUnJour(newDays,ri,srcDi)){found=true;anyFound=true;}}if(!found)break;}
       return anyFound;
     };
     for(let ei=0;ei<emps.length;ei++){
-      if(!isUnder())break;
-      const emp=emps[ei];if(isBlocked(emp.particularite))continue;
-      if(newDays[ei][targetDi].debut||newDays[ei][targetDi].fin)continue;
-      const dispo=getDispo(emp);if(!dispo[targetDi].debut&&!dispo[targetDi].fin)continue;
-      let moved=false;
-      for(let srcDi=0;srcDi<7&&!moved;srcDi++){
-        if(srcDi===targetDi||!newDays[ei][srcDi].debut||!newDays[ei][srcDi].fin)continue;
-        const sv={...newDays[ei][srcDi]};newDays[ei][srcDi]={debut:"",fin:""};
-        if(assignerUnJour(newDays,ei,targetDi)){if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}}
-        else newDays[ei][srcDi]=sv;
-      }
-      if(!moved){
-        const splitH=18;
-        for(let srcDi=0;srcDi<7&&!moved;srcDi++){
-          if(srcDi===targetDi)continue;
-          const srcDay=newDays[ei][srcDi];if(!srcDay.debut||!srcDay.fin)continue;
-          const srcDH=toH(srcDay.debut),srcFH=toH(srcDay.fin);
-          if(srcDH===null||srcDH>=params.jourLimite||srcFH===null||srcFH<=params.soirDebut)continue;
-          if(calcH(toStr(splitH),srcDay.fin)<params.genMinQuart)continue;
-          const chTgt=cin[targetDi];if(!chTgt.ouverture||!chTgt.fermeture)continue;
-          const ouvTgt=toH(chTgt.ouverture);
-          const dTgt=dispo[targetDi].debut?toH(dispo[targetDi].debut):null;
-          const fTgt=dispo[targetDi].fin?toH(dispo[targetDi].fin):null;
-          const jD=Math.max(dTgt!==null?dTgt:ouvTgt,ouvTgt);
-          const jF=Math.min(fTgt!==null?fTgt:toH(chTgt.fermeture),splitH);
-          if(jF-jD<params.genMinQuart)continue;
-          const wtEi=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
-          if(wtEi-calcH(srcDay.debut,srcDay.fin)+calcH(toStr(splitH),srcDay.fin)+(jF-jD)>getMaxH(emp))continue;
-          const sv={...srcDay};newDays[ei][srcDi]={debut:toStr(splitH),fin:srcDay.fin};newDays[ei][targetDi]={debut:toStr(jD),fin:toStr(jF)};
-          if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}
-        }
-      }
-      if(!moved){
-        const splitH=18;const tS2=parseFloat((eff[targetDi].soir||"").replace(",","."))||0;
-        if(tS2>0&&getEffDay(targetDi).soir<tS2-EPS){
-          const fTgt=dispo[targetDi].fin?toH(dispo[targetDi].fin):null;
-          const chTgt=cin[targetDi];
-          if(chTgt.ouverture&&chTgt.fermeture){
-            const ferTgt=toH(chTgt.fermeture);
-            if((fTgt!==null?fTgt:ferTgt)>=ferTgt-EPS){
-              for(let srcDi=0;srcDi<7&&!moved;srcDi++){
-                if(srcDi===targetDi)continue;
-                const srcDay=newDays[ei][srcDi];if(!srcDay.debut||!srcDay.fin)continue;
-                const srcFH=toH(srcDay.fin);if(srcFH===null||srcFH>splitH+EPS)continue;
-                const soirFin=(toH(getFerEff(chTgt.fermeture))??ferTgt);
-                if(soirFin-splitH<params.genMinQuart)continue;
-                const wtEi=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
-                if(wtEi-calcH(srcDay.debut,srcDay.fin)+(soirFin-splitH)>getMaxH(emp))continue;
-                const sv={...srcDay};newDays[ei][srcDi]={debut:"",fin:""};newDays[ei][targetDi]={debut:toStr(splitH),fin:toStr(soirFin)};
-                if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}
-              }
-            }
-          }
-        }
-      }
+      if(!isUnder())break;const emp=emps[ei];if(isBlocked(emp.particularite))continue;if(newDays[ei][targetDi].debut||newDays[ei][targetDi].fin)continue;
+      const dispo=getDispo(emp);if(!dispo[targetDi].debut&&!dispo[targetDi].fin)continue;let moved=false;
+      for(let srcDi=0;srcDi<7&&!moved;srcDi++){if(srcDi===targetDi||!newDays[ei][srcDi].debut||!newDays[ei][srcDi].fin)continue;const sv={...newDays[ei][srcDi]};newDays[ei][srcDi]={debut:"",fin:""};if(assignerUnJour(newDays,ei,targetDi)){if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}}else newDays[ei][srcDi]=sv;}
+      if(!moved){const sp=18;for(let srcDi=0;srcDi<7&&!moved;srcDi++){if(srcDi===targetDi)continue;const srcDay=newDays[ei][srcDi];if(!srcDay.debut||!srcDay.fin)continue;const srcDH=toH(srcDay.debut),srcFH=toH(srcDay.fin);if(srcDH===null||srcDH>=params.jourLimite||srcFH===null||srcFH<=params.soirDebut)continue;if(calcH(toStr(sp),srcDay.fin)<params.genMinQuart)continue;const chTgt=cin[targetDi];if(!chTgt.ouverture||!chTgt.fermeture)continue;const ouvTgt=toH(chTgt.ouverture);const dTgt=dispo[targetDi].debut?toH(dispo[targetDi].debut):null,fTgt=dispo[targetDi].fin?toH(dispo[targetDi].fin):null;const jD=Math.max(dTgt!==null?dTgt:ouvTgt,ouvTgt),jF=Math.min(fTgt!==null?fTgt:toH(chTgt.fermeture),sp);if(jF-jD<params.genMinQuart)continue;const wtEi=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);if(wtEi-calcH(srcDay.debut,srcDay.fin)+calcH(toStr(sp),srcDay.fin)+(jF-jD)>getMaxH(emp))continue;const sv={...srcDay};newDays[ei][srcDi]={debut:toStr(sp),fin:srcDay.fin};newDays[ei][targetDi]={debut:toStr(jD),fin:toStr(jF)};if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}}}
+      if(!moved){const sp=18,tS2=parseFloat((eff[targetDi].soir||"").replace(",","."))||0;if(tS2>0&&getEffDay(targetDi).soir<tS2-EPS){const fTgt=dispo[targetDi].fin?toH(dispo[targetDi].fin):null;const chTgt=cin[targetDi];if(chTgt.ouverture&&chTgt.fermeture){const ferTgt=toH(chTgt.fermeture);if((fTgt!==null?fTgt:ferTgt)>=ferTgt-EPS){for(let srcDi=0;srcDi<7&&!moved;srcDi++){if(srcDi===targetDi)continue;const srcDay=newDays[ei][srcDi];if(!srcDay.debut||!srcDay.fin)continue;const srcFH=toH(srcDay.fin);if(srcFH===null||srcFH>sp+EPS)continue;const soirFin=toH(getFerEff(chTgt.fermeture))??ferTgt;if(soirFin-sp<params.genMinQuart)continue;const wtEi=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);if(wtEi-calcH(srcDay.debut,srcDay.fin)+(soirFin-sp)>getMaxH(emp))continue;const sv={...srcDay};newDays[ei][srcDi]={debut:"",fin:""};newDays[ei][targetDi]={debut:toStr(sp),fin:toStr(soirFin)};if(tenterRemplacement(srcDi,ei)){changes++;moved=true;}else{newDays[ei][targetDi]={debut:"",fin:""};newDays[ei][srcDi]=sv;}}}}}}
     }
-    cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();
-    setShowReequMenu(false);setPage("horaire");
+    cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();setShowReequMenu(false);setPage("horaire");
     showMsg(changes>0?`${changes} déplacement${changes!==1?"s":""} effectué${changes!==1?"s":""}`:"Aucun rééquilibrage possible");
-  };
-
-  const genererFermeturePrioritaire=()=>{
-    const newDays=emps.map(e=>e.days.map(d=>({...d})));
-    const assigns=runPrioriteFermeture(newDays);
-    cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();
-    showMsg(`${assigns} fermeture${assigns!==1?"s":""} assignée${assigns!==1?"s":""}`);setPage("horaire");
   };
 
   const genererEtirer=(heure,sens)=>{
     const newDays=emps.map(e=>e.days.map(d=>({...d})));let assigns=0;
     for(let di=0;di<7;di++){
-      const ch=cin[di];if(!ch.ouverture||!ch.fermeture)continue;
-      const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture);
-      const jT=parseFloat((eff[di].jour||"").replace(",","."))||0;
-      const sT=parseFloat((eff[di].soir||"").replace(",","."))||0;
+      const ch=cin[di];if(!ch.ouverture||!ch.fermeture)continue;const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture);
+      const jT=parseFloat((eff[di].jour||"").replace(",","."))||0,sT=parseFloat((eff[di].soir||"").replace(",","."))||0;
       const target=sens==="debut"?jT:sT;if(!target)continue;
-      if(sens==="debut"&&jT>0&&Number.isInteger(jT))continue;
-      if(sens==="fin"&&sT>0&&Number.isInteger(sT))continue;
-      const getCur=()=>{
-        const thr=ouvH+params.jourDecalage;let jour=0,soir=0;
-        for(let i=0;i<emps.length;i++){
-          if(isBlocked(emps[i].particularite))continue;
-          const d=toH(newDays[i][di].debut),f=toH(newDays[i][di].fin);
-          if(d!==null){if(d<thr)jour+=1;else if(d<params.jourLimite)jour+=params.jourPoids;}
-          if(f!==null){if(f>=params.soirDebut&&f<=params.soirLimite)soir+=params.soirPoids;else if(f>params.soirLimite)soir+=1;}
-        }
-        return{jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};
-      };
+      if(sens==="debut"&&jT>0&&Number.isInteger(jT))continue;if(sens==="fin"&&sT>0&&Number.isInteger(sT))continue;
+      const getCur=()=>{const thr=ouvH+params.jourDecalage;let jour=0,soir=0;for(let i=0;i<emps.length;i++){if(isBlocked(emps[i].particularite))continue;const d=toH(newDays[i][di].debut),f=toH(newDays[i][di].fin);if(d!==null){if(d<thr)jour+=1;else if(d<params.jourLimite)jour+=params.jourPoids;}if(f!==null){if(f>=params.soirDebut&&f<=params.soirLimite)soir+=params.soirPoids;else if(f>params.soirLimite)soir+=1;}}return{jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};};
       if((sens==="debut"?getCur().jour:getCur().soir)>=target-EPS)continue;
-      for(let ei=0;ei<emps.length;ei++){
-        const emp=emps[ei];if(isBlocked(emp.particularite))continue;
-        const day=newDays[ei][di];if(!day.debut||!day.fin)continue;
-        const disp=getDispo(emp);
-        const dH=disp[di].debut?toH(disp[di].debut):null,fH=disp[di].fin?toH(disp[di].fin):null;
-        const empDebut=dH!==null?dH:ouvH,empFin=fH!==null?fH:ferH;
-        const oldH=calcH(day.debut,day.fin);
-        const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
-        if(sens==="debut"){
-          if(toH(day.debut)<=heure+EPS||empDebut>heure+EPS)continue;
-          if(wt-oldH+calcH(toStr(heure),day.fin)>getMaxH(emp))continue;
-          newDays[ei][di]={debut:toStr(heure),fin:day.fin};
-        }else{
-          if(toH(day.fin)>=heure-EPS||empFin<heure-EPS)continue;
-          if(wt-oldH+calcH(day.debut,toStr(heure))>getMaxH(emp))continue;
-          newDays[ei][di]={debut:day.debut,fin:toStr(heure)};
-        }
-        assigns++;if((sens==="debut"?getCur().jour:getCur().soir)>=target-EPS)break;
-      }
+      for(let ei=0;ei<emps.length;ei++){const emp=emps[ei];if(isBlocked(emp.particularite))continue;const day=newDays[ei][di];if(!day.debut||!day.fin)continue;const disp=getDispo(emp);const dH=disp[di].debut?toH(disp[di].debut):null,fH=disp[di].fin?toH(disp[di].fin):null;const empDebut=dH!==null?dH:ouvH,empFin=fH!==null?fH:ferH;const oldH=calcH(day.debut,day.fin);const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);if(sens==="debut"){if(toH(day.debut)<=heure+EPS||empDebut>heure+EPS)continue;if(wt-oldH+calcH(toStr(heure),day.fin)>getMaxH(emp))continue;newDays[ei][di]={debut:toStr(heure),fin:day.fin};}else{if(toH(day.fin)>=heure-EPS||empFin<heure-EPS)continue;if(wt-oldH+calcH(day.debut,toStr(heure))>getMaxH(emp))continue;newDays[ei][di]={debut:day.debut,fin:toStr(heure)};}assigns++;if((sens==="debut"?getCur().jour:getCur().soir)>=target-EPS)break;}
     }
-    cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();
-    showMsg(`${assigns} quart${assigns!==1?"s":""} modifié${assigns!==1?"s":""}`);setPage("horaire");
+    cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();showMsg(`${assigns} quart${assigns!==1?"s":""} modifié${assigns!==1?"s":""}`);setPage("horaire");
   };
 
-  const genererQuart4h=(type)=>{
-    const debut=type==="jour"?"14:00":"18:00";
-    const fin=type==="jour"?"18:00":"22:00";
-    const dV=toH(debut),fV=toH(fin);
+  const genererQuart4h=type=>{
+    const debut=type==="jour"?"14:00":"18:00",fin=type==="jour"?"18:00":"22:00";const dV=toH(debut),fV=toH(fin);
     const newDays=emps.map(e=>e.days.map(d=>({...d})));let assigns=0;
-    for(let di=0;di<7;di++){
-      const c=mkDayCache(di,newDays);if(!c)continue;
-      const{jT,sT}=c;
-      const atCap=()=>{if(!jT&&!sT)return false;let j=c.jour,s=c.soir;if(dV!==null){if(dV<c.thr)j+=1;else if(dV<params.jourLimite)j+=params.jourPoids;}if(fV!==null){if(fV>=params.soirDebut&&fV<=params.soirLimite)s+=params.soirPoids;else if(fV>params.soirLimite)s+=1;}return(jT>0&&j>jT+EPS)||(sT>0&&s>sT+EPS);};
-      for(let ei=0;ei<emps.length;ei++){
-        if(atCap())break;
-        const emp=emps[ei];if(isBlocked(emp.particularite))continue;
-        if(newDays[ei][di].debut||newDays[ei][di].fin)continue;
-        const disp=getDispo(emp);
-        const dH=disp[di].debut?toH(disp[di].debut):null,fH=disp[di].fin?toH(disp[di].fin):null;
-        if(dH===null&&fH===null)continue;
-        if(dH!==null&&dH>dV+EPS)continue;if(fH!==null&&fH<fV-EPS)continue;
-        const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);
-        if(wt+4>getMaxH(emp))continue;
-        newDays[ei][di]={debut,fin};updCache(c,debut,fin);assigns++;
-      }
-    }
-    if(assigns>0){cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();showMsg(`${assigns} quart${assigns!==1?"s":""} 4h assigné${assigns!==1?"s":""}`);}
-    else showMsg("Aucun quart 4h possible");
+    for(let di=0;di<7;di++){const c=mkDayCache(di,newDays);if(!c)continue;const{jT,sT}=c;const atCap=()=>{if(!jT&&!sT)return false;let j=c.jour,s=c.soir;if(dV!==null){if(dV<c.thr)j+=1;else if(dV<params.jourLimite)j+=params.jourPoids;}if(fV!==null){if(fV>=params.soirDebut&&fV<=params.soirLimite)s+=params.soirPoids;else if(fV>params.soirLimite)s+=1;}return(jT>0&&j>jT+EPS)||(sT>0&&s>sT+EPS);};for(let ei=0;ei<emps.length;ei++){if(atCap())break;const emp=emps[ei];if(isBlocked(emp.particularite))continue;if(newDays[ei][di].debut||newDays[ei][di].fin)continue;const disp=getDispo(emp);const dH=disp[di].debut?toH(disp[di].debut):null,fH=disp[di].fin?toH(disp[di].fin):null;if(dH===null&&fH===null)continue;if(dH!==null&&dH>dV+EPS)continue;if(fH!==null&&fH<fV-EPS)continue;const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);if(wt+4>getMaxH(emp))continue;newDays[ei][di]={debut,fin};updCache(c,debut,fin);assigns++;}}
+    if(assigns>0){cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();showMsg(`${assigns} quart${assigns!==1?"s":""} 4h assigné${assigns!==1?"s":""}`);}else showMsg("Aucun quart 4h possible");
   };
 
-  // ── Render helpers ────────────────────────────────────────────────────────
-  const TotalCell=({id})=>{
-    const tot=rowTotals[id],row=emps[empIdx[id]];
-    const maxH=row&&row.particularite==="Max heures"&&row.maxH?parseFloat(row.maxH):null;
-    const tc=totColor(tot,maxH);
-    return(<td style={{textAlign:"center",verticalAlign:"middle",padding:"10px 8px"}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,minHeight:36}}><span style={{fontSize:14,fontWeight:800,visibility:tot>0?"visible":"hidden",color:tc}}>{fmtH(tot)||"0"}</span><div style={{width:36,height:3,borderRadius:2,background:"#d1d5db",overflow:"hidden"}}><div style={{width:`${Math.min(100,(tot/(maxH||40))*100)}%`,height:"100%",background:tc,borderRadius:2}}/></div></div></td>);
-  };
+  const TotalCell=({id})=>{const tot=rowTotals[id],row=emps[empIdx[id]];const maxH=row&&row.particularite==="Max heures"&&row.maxH?parseFloat(row.maxH):null;const tc=totColor(tot,maxH);return(<td style={{textAlign:"center",verticalAlign:"middle",padding:"10px 8px"}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,minHeight:36}}><span style={{fontSize:14,fontWeight:800,visibility:tot>0?"visible":"hidden",color:tc}}>{fmtH(tot)||"0"}</span><div style={{width:36,height:3,borderRadius:2,background:"#d1d5db",overflow:"hidden"}}><div style={{width:`${Math.min(100,(tot/(maxH||40))*100)}%`,height:"100%",background:tc,borderRadius:2}}/></div></div></td>);};
   const DeleteCell=({id})=>(<td style={{textAlign:"center",verticalAlign:"middle",padding:"0 6px"}}><button onClick={()=>remEmp(id)} style={{background:"none",border:"none",cursor:"pointer",color:"#c8cdd8",fontSize:14,padding:4}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#c8cdd8"}>×</button></td>);
-  const PrioCell=({row})=>(<td style={{textAlign:"center",verticalAlign:"middle",padding:"0 4px"}}><input type="text" value={row.prio===undefined||row.prio===null?"":row.prio} onChange={e=>setEmp(row.id,"prio",e.target.value)} maxLength={3} style={prioS} title="Numéro de priorité PDF"/></td>);
-  const rstS=act=>({border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,width:"100%",textAlign:"left",background:act?"#fef2f2":"#fff",color:act?"#dc2626":"#475569",transition:"background .15s"});
-  const defBadge=di=>{
-    const d=deficits[di];if(!d.hasDeficit)return <span style={{fontSize:10,color:"#16a34a",fontWeight:700}}>✓</span>;
-    const pts=[];if(d.jour>EPS)pts.push(`-${d.jour.toString().replace(".",sep)}j`);if(d.soir>EPS)pts.push(`-${d.soir.toString().replace(".",sep)}s`);
-    return <span style={{fontSize:10,color:"#dc2626",fontWeight:700}}>{pts.join(" ")}</span>;
-  };
+  const rstS=act=>({border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,width:"100%",textAlign:"left",background:act?"#fef2f2":"#fff",color:act?"#dc2626":"#475569"});
+  const defBadge=di=>{const d=deficits[di];if(!d.hasDeficit)return <span style={{fontSize:10,color:"#16a34a",fontWeight:700}}>✓</span>;const pts=[];if(d.jour>EPS)pts.push(`-${d.jour.toString().replace(".",sep)}j`);if(d.soir>EPS)pts.push(`-${d.soir.toString().replace(".",sep)}s`);return <span style={{fontSize:10,color:"#dc2626",fontWeight:700}}>{pts.join(" ")}</span>;};
   const stickyProps={cin,eff,effCalcs,wd,params,cfk,setCfk,cinRefs,updCin,blurCin,onCinKD,onPasteCin,setEv,onPasteEff,sep};
 
+  const renderCells=(row,di,day,isHoraire)=>{
+    if(isBlocked(row.particularite))return <div style={{height:52,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:2,borderRadius:2,background:"#c8cdd8"}}/></div>;
+    const dispRow=getDispo(row),dDay=dispRow[di];
+    if(isHoraire){
+      const h=calcH(day.debut,day.fin),ch=cin[di],mO=!!(day.debut&&day.debut===ch.ouverture),mC=!!(day.fin&&day.fin===ch.fermeture);
+      const kD=rk(row.id,di,"debut"),kF=rk(row.id,di,"fin");
+      return(<div style={{display:"flex",alignItems:"center",gap:4}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><input value={day.debut} ref={el=>refs.current[kD]=el} onChange={e=>updDay(row.id,di,"debut",e.target.value)} onBlur={e=>{blurDay(row.id,di,"debut",e.target.value);setFk(null);}} onFocus={e=>{setFk(kD);selAll(e);}} onKeyDown={e=>onKD(e,row.id,di,"debut")} onPaste={e=>onPaste(e,row.id,di)} maxLength={5} autoComplete="off" style={tiS(!!day.debut,mO?"#dbeafe":"#fff",fk===kD)} placeholder={!day.debut&&dDay.debut?dDay.debut:""}/><div style={{width:16,height:1,background:"#e2e8f0"}}/><input value={day.fin} ref={el=>refs.current[kF]=el} onChange={e=>updDay(row.id,di,"fin",e.target.value)} onBlur={e=>{blurDay(row.id,di,"fin",e.target.value);setFk(null);}} onFocus={e=>{setFk(kF);selAll(e);}} onKeyDown={e=>onKD(e,row.id,di,"fin")} maxLength={5} autoComplete="off" style={tiS(!!day.fin,mC?"#fff3e0":"#fff",fk===kF)} placeholder={!day.fin&&dDay.fin?dDay.fin:""}/></div><span style={{fontSize:10,fontWeight:700,color:h>0&&h<4?"#fb7185":"#94a3b8",whiteSpace:"nowrap",visibility:h>0?"visible":"hidden",minWidth:20}}>{fmtHs(h)}</span></div>);
+    }else{
+      const d=dDay,hasDispo=d.debut||d.fin,kD=rd(row.id,di,"debut"),kF=rd(row.id,di,"fin");
+      return(<div style={{display:"flex",alignItems:"center",gap:4}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><input value={d.debut} ref={el=>refs.current[kD]=el} onChange={e=>updDispo(row.id,di,"debut",e.target.value)} onBlur={e=>{blurDispo(row.id,di,"debut",e.target.value);setDfk(null);}} onFocus={e=>{setDfk(kD);selAll(e);}} onKeyDown={e=>onKDDispo(e,row.id,di,"debut")} onPaste={e=>onPasteDispo(e,row.id,di)} maxLength={5} style={tiS(!!d.debut,"#fff",dfk===kD)}/><div style={{width:16,height:1,background:"#e2e8f0"}}/><input value={d.fin} ref={el=>refs.current[kF]=el} onChange={e=>updDispo(row.id,di,"fin",e.target.value)} onBlur={e=>{blurDispo(row.id,di,"fin",e.target.value);setDfk(null);}} onFocus={e=>{setDfk(kF);selAll(e);}} onKeyDown={e=>onKDDispo(e,row.id,di,"fin")} onPaste={e=>onPasteDispo(e,row.id,di)} maxLength={5} style={tiS(!!d.fin,"#fff",dfk===kF)}/></div><span style={{fontSize:10,fontWeight:700,color:"#94a3b8",whiteSpace:"nowrap",visibility:hasDispo?"visible":"hidden",minWidth:20}}>{fmtHs(calcH(d.debut,d.fin))}</span></div>);
+    }
+  };
+
+  const renderTable=isHoraire=>(
+    <div style={{background:"#f1f2f6",boxShadow:"0 1px 6px rgba(0,0,0,.1)"}}>
+      <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/><tbody>
+        {emps.map((row,ri)=>{
+          const bg=ri%2===0?"#f0f1f7":"#e0e1ed";
+          return(<tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
+            <PrioCell prio={row.prio} onCommit={v=>setEmp(row.id,"prio",v)}/>
+            {isHoraire
+              ?<td style={{padding:"4px 12px 4px 8px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><input placeholder="Prénom" value={row.prenom} onChange={e=>setEmp(row.id,"prenom",e.target.value)} style={niS}/><input placeholder="Nom" value={row.nom} onChange={e=>setEmp(row.id,"nom",e.target.value)} style={niSsub}/></div></td>
+              :<td style={{padding:"4px 12px 4px 8px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><span style={{fontSize:13,fontWeight:600,color:"#1e293b"}}>{row.prenom}</span><span style={{fontSize:12,color:"#64748b"}}>{row.nom}</span></div></td>
+            }
+            <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}>
+              {isHoraire?<span style={{fontSize:11,color:"#64748b"}}>{row.particularite||"—"}</span>:<PartCell row={row} onChange={(f,v)=>setEmp(row.id,f,v)}/>}
+            </td>
+            {(isHoraire?row.days:getDispo(row)).map((day,di)=>(
+              <td key={di} style={{padding:"8px 6px",verticalAlign:"middle",textAlign:"center",...blS(di)}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>{renderCells(row,di,day,isHoraire)}</div>
+              </td>
+            ))}
+            <TotalCell id={row.id}/><DeleteCell id={row.id}/>
+          </tr>);
+        })}
+      </tbody>
+      {isHoraire&&(<tfoot><tr style={{borderTop:"2px solid #c8cdd8",background:"#f8fafc"}}><td/><td style={{padding:"6px 12px 6px 8px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px"}}>TOTAL / JOUR</td><td style={{borderLeft:"1px solid #c8cdd8"}}/>{dayTotals.map((h,di)=>(<td key={di} style={{textAlign:"center",padding:"10px 6px",...blS(di)}}>{h>0?<span style={{fontSize:12,fontWeight:700,color:"#475569"}}>{fmtH(h)}</span>:<span style={{color:"#e2e8f0"}}>—</span>}</td>))}<td style={{textAlign:"center",padding:"10px 8px"}}><span style={{fontSize:13,fontWeight:800,color:"#0f172a"}}>{fmtH(grand)||"—"}</span></td><td/></tr></tfoot>)}
+      </table>
+      {isHoraire&&<div style={{padding:"12px 18px",borderTop:"1px solid #d1d5db"}}><button onClick={addEmp} style={{background:"none",border:"1.5px dashed #a0a8b8",borderRadius:0,padding:"8px 18px",fontSize:13,color:"#94a3b8",cursor:"pointer",display:"flex",alignItems:"center",gap:7,fontWeight:500}} onMouseEnter={e=>{e.currentTarget.style.borderColor="#2563eb";e.currentTarget.style.color="#2563eb";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#a0a8b8";e.currentTarget.style.color="#94a3b8";}}><span style={{fontSize:17,lineHeight:1}}>+</span> Ajouter un équipier</button></div>}
+      {!isHoraire&&<div style={{padding:"10px 18px",borderTop:"1px solid #d1d5db",background:"#f8fafc",fontSize:11,color:"#94a3b8"}}>💡 Inscris les heures de disponibilité. Les cases vides sont considérées comme indisponibles.</div>}
+    </div>
+  );
+
   const PanelLeft=(
-    <div style={{position:"sticky",top:24,zIndex:100,width:158,background:"#fff",boxShadow:"0 4px 20px rgba(0,0,0,.18)",border:"1.5px solid #e2e8f0",display:"flex",flexDirection:"column",overflow:"hidden",flexShrink:0}}>
+    <div style={panelStyle}>
       <PanelSection label="SEMAINE" first/>
-      <div style={{padding:"8px 10px",borderBottom:"1px solid #f1f5f9",display:"flex",flexDirection:"column",gap:6}}>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"6px 0"}}>
-          <div style={{fontSize:9,color:"#94a3b8",fontWeight:600,letterSpacing:"0.5px",textTransform:"uppercase"}}>Total semaine</div>
-          <div style={{fontSize:18,fontWeight:800,color:"#0f172a",marginTop:2}}>{fmtH(grand)||"0"}</div>
-        </div>
-        <div style={{height:1,background:"#f1f5f9"}}/>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"6px 0"}}>
-          <div style={{fontSize:9,color:"#94a3b8",fontWeight:600,letterSpacing:"0.5px",textTransform:"uppercase"}}>Moy. / équipier</div>
-          <div style={{fontSize:18,fontWeight:800,color:"#2563eb",marginTop:2}}>{emps.length?(fmtH(grand/emps.length)||"0"):"—"}</div>
-        </div>
+      <div style={{padding:"8px 10px",borderBottom:"1px solid #f1f5f9"}}>
+        {[{label:"Total semaine",value:fmtH(grand)||"0",color:"#0f172a"},{label:"Moy. / équipier",value:emps.length?(fmtH(grand/emps.length)||"0"):"—",color:"rgb(0,91,245)"}].map(({label,value,color},i)=>(
+          <React.Fragment key={label}>{i>0&&<div style={{height:1,background:"#f1f5f9",margin:"2px 0"}}/>}<div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"6px 0"}}><div style={{fontSize:9,color:"#94a3b8",fontWeight:600,letterSpacing:"0.5px",textTransform:"uppercase"}}>{label}</div><div style={{fontSize:18,fontWeight:800,color,marginTop:2}}>{value}</div></div></React.Fragment>
+        ))}
       </div>
       <PanelSection label="NAVIGATION"/>
       {[{id:"horaire",label:"📅 Horaire"},{id:"dispo",label:"📋 Dispos"},{id:"params",label:"⚙️ Params"}].map(({id,label})=>(
-        <button key={id} onClick={()=>setPage(id)} style={{border:"none",borderBottom:"1px solid #f1f5f9",padding:"10px 10px",cursor:"pointer",fontSize:11,fontWeight:600,textAlign:"left",background:page===id?"#1e293b":"#fff",color:page===id?"#fff":"#475569",width:"100%"}} onMouseEnter={e=>e.currentTarget.style.background=page===id?"#1e293b":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=page===id?"#1e293b":"#fff"}>{label}</button>
+        <button key={id} onClick={()=>setPage(id)} style={{border:"none",borderBottom:"1px solid #f1f5f9",padding:"10px 10px",cursor:"pointer",fontSize:11,fontWeight:600,textAlign:"left",background:page===id?"rgb(0,91,245)":"#fff",color:page===id?"#fff":"#475569",width:"100%"}} onMouseEnter={e=>e.currentTarget.style.background=page===id?"rgb(0,91,245)":"#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=page===id?"rgb(0,91,245)":"#fff"}>{label}</button>
       ))}
       <PanelSection label="SEMAINE"/>
       <div style={{padding:"6px 10px 8px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <button onClick={()=>setWs(d=>addD(d,-7))} style={{background:"none",border:"1.5px solid #e2e8f0",cursor:"pointer",fontSize:14,color:"#64748b",padding:"4px 8px",lineHeight:1,borderRadius:3}}>‹</button>
-        <div style={{textAlign:"center"}}>
-          <div style={{fontSize:11,fontWeight:700,color:"#0f172a"}}>Sem. {iw}</div>
-          <div style={{fontSize:9,color:"#94a3b8",marginTop:2}}>{fmt(ws,true)}</div>
-        </div>
+        <div style={{textAlign:"center"}}><div style={{fontSize:11,fontWeight:700,color:"#0f172a"}}>Sem. {iw}</div><div style={{fontSize:9,color:"#94a3b8",marginTop:2}}>{fmt(ws,true)}</div></div>
         <button onClick={()=>setWs(d=>addD(d,7))} style={{background:"none",border:"1.5px solid #e2e8f0",cursor:"pointer",fontSize:14,color:"#64748b",padding:"4px 8px",lineHeight:1,borderRadius:3}}>›</button>
       </div>
-      {savedOk!==null&&<div style={{padding:"4px 10px",borderTop:"1px solid #f1f5f9",textAlign:"center",fontSize:10,color:savedOk?"#86efac":"#fca5a5"}}>{savedOk?"💾 Sauvegarde active":"⚠️ Sauvegarde indisponible"}</div>}
+      {savedOk!==null&&<div style={{padding:"4px 10px",borderTop:"1px solid #f1f5f9",textAlign:"center",fontSize:10,color:savedOk?"#86efac":"#fca5a5"}}>{savedOk?"💾 Sauvegarde active":"⚠️ Indisponible"}</div>}
     </div>
   );
 
   const PanelRight=(
-    <div style={{position:"sticky",top:24,zIndex:100,width:158,background:"#fff",boxShadow:"0 4px 20px rgba(0,0,0,.18)",border:"1.5px solid #e2e8f0",display:"flex",flexDirection:"column",overflow:"hidden",flexShrink:0}}>
+    <div style={panelStyle}>
       <PanelSection label="ATTRIBUTION" first/>
       <PanelBtn onClick={genererTous} green><span style={{fontSize:11,fontWeight:700}}>⚡⚡ Attribuer tous</span></PanelBtn>
       <PanelBtn onClick={genererTousPlus} blue><span style={{fontSize:11,fontWeight:700}}>⚡⚡ Attribuer ++</span></PanelBtn>
       <button onClick={()=>setShowReequMenu(v=>!v)} style={{border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,color:"#475569",background:showReequMenu?"#f1f5f9":"#fff",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=showReequMenu?"#f1f5f9":"#fff"}>
         <span>⚖️ Rééquilibrer</span><span style={{fontSize:9,color:"#94a3b8"}}>{showReequMenu?"▲":"▼"}</span>
       </button>
-      {showReequMenu&&(
-        <div style={{borderBottom:"1px solid #e2e8f0"}}>
-          {DS.map((_,di)=>(
-            <button key={di} onClick={()=>genererRééquilibrerJour(di)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",border:"none",borderBottom:"1px solid #f8fafc",padding:"6px 14px 6px 18px",cursor:"pointer",background:"#fafafa",fontSize:11,fontWeight:600}} onMouseEnter={e=>e.currentTarget.style.background="#e0f0e8"} onMouseLeave={e=>e.currentTarget.style.background="#fafafa"}>
-              <span style={{color:"#475569"}}>{DS[di]}</span>{defBadge(di)}
-            </button>
-          ))}
-        </div>
-      )}
+      {showReequMenu&&(<div style={{borderBottom:"1px solid #e2e8f0"}}>{DS.map((_,di)=>(<button key={di} onClick={()=>genererRééquilibrerJour(di)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",border:"none",borderBottom:"1px solid #f8fafc",padding:"6px 14px 6px 18px",cursor:"pointer",background:"#fafafa",fontSize:11,fontWeight:600}} onMouseEnter={e=>e.currentTarget.style.background="#e0f0e8"} onMouseLeave={e=>e.currentTarget.style.background="#fafafa"}><span style={{color:"#475569"}}>{DS[di]}</span>{defBadge(di)}</button>))}</div>)}
       <PanelBtn onClick={genererFermeturePrioritaire}>🔒 Priorité fermeture</PanelBtn>
       <PanelSection label="AJUSTEMENTS"/>
       <div style={{padding:"6px 8px 2px"}}>
         <div style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.4px",marginBottom:4}}>JOUR — avancer début</div>
-        <div style={{display:"flex",gap:4,marginBottom:8}}>
-          <SmallBtn onClick={()=>genererEtirer(14,"debut")} label="14h"/>
-          <SmallBtn onClick={()=>genererEtirer(16,"debut")} label="16h"/>
-        </div>
+        <div style={{display:"flex",gap:4,marginBottom:8}}><SmallBtn onClick={()=>genererEtirer(14,"debut")} label="14h"/><SmallBtn onClick={()=>genererEtirer(16,"debut")} label="16h"/></div>
         <div style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.4px",marginBottom:4}}>SOIR — prolonger fin</div>
-        <div style={{display:"flex",gap:4,marginBottom:6}}>
-          <SmallBtn onClick={()=>genererEtirer(20,"fin")} label="20h"/>
-          <SmallBtn onClick={()=>genererEtirer(22,"fin")} label="22h"/>
-        </div>
+        <div style={{display:"flex",gap:4,marginBottom:6}}><SmallBtn onClick={()=>genererEtirer(20,"fin")} label="20h"/><SmallBtn onClick={()=>genererEtirer(22,"fin")} label="22h"/></div>
       </div>
       <PanelSection label="QUARTS 4H"/>
-      <div style={{display:"flex",gap:4,padding:"6px 8px"}}>
-        <SmallBtn onClick={()=>genererQuart4h("jour")} label="☀️ 14–18h"/>
-        <SmallBtn onClick={()=>genererQuart4h("soir")} label="🌙 18–22h"/>
-      </div>
+      <div style={{display:"flex",gap:4,padding:"6px 8px"}}><SmallBtn onClick={()=>genererQuart4h("jour")} label="☀️ 14–18h"/><SmallBtn onClick={()=>genererQuart4h("soir")} label="🌙 18–22h"/></div>
       <PanelSection label="DONNÉES"/>
       <PanelBtn onClick={loadTestData}>🧪 Test</PanelBtn>
       <PanelBtn onClick={()=>importRef.current.click()}>📥 Importer</PanelBtn>
@@ -828,164 +559,103 @@ function App(){
   );
 
   return(
-    <div style={{fontFamily:"'Inter','Segoe UI',sans-serif",background:"#5a6080",minHeight:"100vh",padding:"24px 12px",display:"flex",justifyContent:"center",gap:12,alignItems:"flex-start"}}>
+    <div style={{fontFamily:"'Inter','Segoe UI',sans-serif",background:"rgb(14,27,52)",minHeight:"100vh",padding:"24px 12px",display:"flex",justifyContent:"center",gap:12,alignItems:"flex-start"}}>
       <input ref={importRef} type="file" accept=".pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])handleImport(e.target.files[0]);e.target.value="";}}/>
       {genMsg&&<div style={{position:"fixed",bottom:24,right:16,zIndex:2000,padding:"10px 16px",background:"#dcfce7",border:"1.5px solid #16a34a",fontSize:12,fontWeight:600,color:"#15803d",borderRadius:6,boxShadow:"0 4px 12px rgba(0,0,0,.15)"}}>{genMsg}</div>}
       {importMsg&&<div style={{position:"fixed",bottom:genMsg?72:24,right:16,zIndex:2000,padding:"10px 16px",background:"#dbeafe",border:"1.5px solid #3b82f6",fontSize:12,fontWeight:600,color:"#1d4ed8",borderRadius:6,boxShadow:"0 4px 12px rgba(0,0,0,.15)"}}>{importMsg}</div>}
 
       {PanelLeft}
-
       <div style={{width:TW}}>
-
         {page==="params"&&(
-          <div style={{background:"#fff",boxShadow:"0 1px 6px rgba(0,0,0,.1)",padding:"32px"}}>
-            <h2 style={{margin:"0 0 24px",fontSize:16,fontWeight:800,color:"#0f172a"}}>⚙️ Paramètres</h2>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:32}}>
-              {[{title:"Formule JOUR",bg:"#dbeafe",ps:[{label:"Décalage après ouverture",k:"jourDecalage",u:"h"},{label:"Heure limite journée",k:"jourLimite",u:"h"},{label:"Pondération intermédiaire",k:"jourPoids",u:"×"}]},{title:"Formule SOIR",bg:"#fff3e0",ps:[{label:"Début tranche soir basse",k:"soirDebut",u:"h"},{label:"Fin tranche soir basse",k:"soirLimite",u:"h"},{label:"Pondération intermédiaire",k:"soirPoids",u:"×"}]}].map(({title,bg,ps})=>(
-                <div key={title} style={{background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:bg}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>{title}</h3></div>
-                  {ps.map(({label,k,u})=><ParamRow key={k} label={label} value={params[k]} onChange={v=>setP(k,v)} unit={u}/>)}
+          <div style={{background:"#fff",boxShadow:"0 1px 6px rgba(0,0,0,.1)",padding:"32px",borderRadius:4}}>
+            <h2 style={{margin:"0 0 6px",fontSize:18,fontWeight:800,color:"#0f172a"}}>⚙️ Paramètres</h2>
+            <p style={{fontSize:12,color:"#94a3b8",marginBottom:4}}>Contrôle le calcul des effectifs, la génération automatique et l'import des disponibilités.</p>
+
+            <ParamSection label="CALCUL DES EFFECTIFS" color="#dbeafe">
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:16}}>
+                <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:6,padding:"14px"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#2563eb",letterSpacing:"0.5px",marginBottom:10}}>TRANCHE JOUR</div>
+                  <ParamRow label="Décalage après ouverture" value={params.jourDecalage} onChange={v=>setP("jourDecalage",v)} unit="h" step="0.5"/>
+                  <ParamRow label="Heure limite journée" value={params.jourLimite} onChange={v=>setP("jourLimite",v)} unit="h" step="0.5"/>
+                  <ParamRow label="Pondération intermédiaire" value={params.jourPoids} onChange={v=>setP("jourPoids",v)} unit="×" step="0.25"/>
+                  <div style={{marginTop:8,fontSize:10,color:"#1d4ed8",lineHeight:1.7,padding:"8px",background:"#dbeafe",borderRadius:4}}>
+                    Début &lt; ouverture + {params.jourDecalage}h → <b>1×</b><br/>
+                    Début entre {params.jourDecalage}h et {params.jourLimite}h → <b>{params.jourPoids}×</b><br/>
+                    Début après {params.jourLimite}h → <b>0×</b>
+                  </div>
                 </div>
-              ))}
-            </div>
-            <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:"#bbf7d0"}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>GÉNÉRATION AUTOMATIQUE</h3></div>
-              <ParamRow label="Durée minimum d'un quart" value={params.genMinQuart} onChange={v=>setP("genMinQuart",v)} unit="h" step="0.5"/>
-              <ParamRow label="Heures supplémentaires tolérées (au-delà de 40h)" value={params.genMaxHeures-40} onChange={v=>setP("genMaxHeures",(parseFloat(v)||0)+40)} unit="h" step="0.5"/>
-              <ParamRow label="Nb équipiers à l'ouverture" value={params.genNbOuverture} onChange={v=>setP("genNbOuverture",v)} unit="pers" step="1"/>
-              <ParamRow label="Délai après quota ouverture" value={params.genDelaiApresOuverture} onChange={v=>setP("genDelaiApresOuverture",v)} unit="h" step="0.25"/>
-              <ParamRow label="Éligible ouverture si dispo commence avant" value={params.genSeuilOuverture} onChange={v=>setP("genSeuilOuverture",v)} unit="h" step="0.5"/>
-              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
-                <div style={{flex:1,paddingRight:16}}><div style={{fontSize:12,color:"#475569",fontWeight:500}}>Démarrer le quart à l'heure d'ouverture</div><div style={{fontSize:10,color:"#94a3b8",marginTop:3,lineHeight:1.5}}>Si la dispo d'un équipier commence avant le seuil, son quart part de l'ouverture même si sa dispo commence après</div></div>
-                <div style={{display:"flex",gap:8,flexShrink:0}}><ToggleBtn val={true} cur={params.genOuvertureFlexible} onClick={v=>setP("genOuvertureFlexible",v)} label="Activé"/><ToggleBtn val={false} cur={params.genOuvertureFlexible} onClick={v=>setP("genOuvertureFlexible",v)} label="Désactivé"/></div>
+                <div style={{background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:6,padding:"14px"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#ea580c",letterSpacing:"0.5px",marginBottom:10}}>TRANCHE SOIR</div>
+                  <ParamRow label="Début tranche soir basse" value={params.soirDebut} onChange={v=>setP("soirDebut",v)} unit="h" step="0.5"/>
+                  <ParamRow label="Fin tranche soir basse" value={params.soirLimite} onChange={v=>setP("soirLimite",v)} unit="h" step="0.5"/>
+                  <ParamRow label="Pondération intermédiaire" value={params.soirPoids} onChange={v=>setP("soirPoids",v)} unit="×" step="0.25"/>
+                  <div style={{marginTop:8,fontSize:10,color:"#c2410c",lineHeight:1.7,padding:"8px",background:"#ffedd5",borderRadius:4}}>
+                    Fin entre {params.soirDebut}h et {params.soirLimite}h → <b>{params.soirPoids}×</b><br/>
+                    Fin après {params.soirLimite}h → <b>1×</b><br/>
+                    Fin avant {params.soirDebut}h → <b>0×</b>
+                  </div>
+                </div>
               </div>
-              <ParamRow label="Nb fermetures cinéma" value={params.genNbFermetureCinema} onChange={v=>setP("genNbFermetureCinema",v)} unit="pers" step="1"/>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}><span style={{fontSize:12,color:"#475569"}}>Écraser les quarts existants</span><div style={{display:"flex",gap:8}}><ToggleBtn val={true} cur={params.genEcraser} onClick={v=>setP("genEcraser",v)} label="Oui"/><ToggleBtn val={false} cur={params.genEcraser} onClick={v=>setP("genEcraser",v)} label="Non"/></div></div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:params.genFermetureComptoir?16:0}}><div style={{fontSize:12,color:"#475569",fontWeight:500}}>Fermeture comptoir</div><div style={{display:"flex",gap:8}}><ToggleBtn val={true} cur={params.genFermetureComptoir} onClick={v=>setP("genFermetureComptoir",v)} label="Activé"/><ToggleBtn val={false} cur={params.genFermetureComptoir} onClick={v=>setP("genFermetureComptoir",v)} label="Désactivé"/></div></div>
-              {params.genFermetureComptoir&&(<div style={{background:"#fff",border:"1px solid #e2e8f0",padding:"16px",marginTop:4}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div><div style={{fontSize:11,fontWeight:700,color:"#94a3b8",marginBottom:10}}>RÈGLE 1 — SEUIL HAUT</div><ParamRow label="Si fermeture ≥" value={params.genSeuilHaut} onChange={v=>setP("genSeuilHaut",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirHaut} onChange={v=>setP("genComptoirHaut",v)} unit="h" step="0.5"/></div><div><div style={{fontSize:11,fontWeight:700,color:"#94a3b8",marginBottom:10}}>RÈGLE 2 — SEUIL BAS</div><ParamRow label={`Si entre X et ${params.genSeuilHaut}h`} value={params.genSeuilBas} onChange={v=>setP("genSeuilBas",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirBas} onChange={v=>setP("genComptoirBas",v)} unit="h" step="0.5"/></div></div><div style={{marginTop:10,fontSize:11,color:"#94a3b8"}}>≥ {params.genSeuilHaut}h → {params.genComptoirHaut}h · entre {params.genSeuilBas}h et {params.genSeuilHaut}h → {params.genComptoirBas}h</div></div>)}
-            </div>
-            <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:"#dcfce7"}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>TOLÉRANCE EFFECTIFS</h3></div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:params.tolEffOn?16:0}}><span style={{fontSize:12,color:"#475569"}}>Vert pâle si proche de la cible</span><div style={{display:"flex",gap:8}}><ToggleBtn val={true} cur={params.tolEffOn} onClick={v=>setP("tolEffOn",v)} label="Activé"/><ToggleBtn val={false} cur={params.tolEffOn} onClick={v=>setP("tolEffOn",v)} label="Désactivé"/></div></div>
-              {params.tolEffOn&&<ParamRow label="Différence tolérée (±)" value={params.tolEff} onChange={v=>setP("tolEff",v)} unit="±" step="0.25"/>}
-            </div>
-            <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:"#fef9c3"}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>CORRECTION DISPONIBILITÉS</h3></div>
-              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:params.dispoFinCorrection?16:0}}>
-                <div style={{flex:1,paddingRight:16}}><div style={{fontSize:12,color:"#475569",fontWeight:500}}>Corriger les fins de dispo en format AM</div><div style={{fontSize:10,color:"#94a3b8",marginTop:3,lineHeight:1.5}}>Ex. fin à 11:00 → interprétée comme 23:00. Corrige les heures de fin inférieures au seuil en ajoutant 12h.</div></div>
-                <div style={{display:"flex",gap:8,flexShrink:0}}><ToggleBtn val={true} cur={params.dispoFinCorrection} onClick={v=>setP("dispoFinCorrection",v)} label="Activé"/><ToggleBtn val={false} cur={params.dispoFinCorrection} onClick={v=>setP("dispoFinCorrection",v)} label="Désactivé"/></div>
+              <ToggleRow label="Tolérance — vert pâle si proche de la cible" sub="Affiche les effectifs en vert pâle quand ils sont dans la marge définie ci-dessous." param={params.tolEffOn} setParam={v=>setP("tolEffOn",v)}/>
+              {params.tolEffOn&&<ParamRow label="Marge de tolérance (±)" value={params.tolEff} onChange={v=>setP("tolEff",v)} unit="±" step="0.25"/>}
+            </ParamSection>
+
+            <ParamSection label="GÉNÉRATION AUTOMATIQUE" color="#bbf7d0">
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}}>
+                <div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#64748b",letterSpacing:"0.4px",marginBottom:10}}>CONTRAINTES</div>
+                  <ParamRow label="Durée minimum d'un quart" value={params.genMinQuart} onChange={v=>setP("genMinQuart",v)} unit="h" step="0.5"/>
+                  <ParamRow label="Maximum d'heures / semaine" value={params.genMaxHeures} onChange={v=>setP("genMaxHeures",parseFloat(v)||0)} unit="h" step="0.5"/>
+                  <ParamRow label="Équipiers à l'ouverture" value={params.genNbOuverture} onChange={v=>setP("genNbOuverture",v)} unit="pers" step="1"/>
+                  <ParamRow label="Délai après quota ouverture" value={params.genDelaiApresOuverture} onChange={v=>setP("genDelaiApresOuverture",v)} unit="h" step="0.25"/>
+                  <ParamRow label="Éligible ouverture si dispo avant" value={params.genSeuilOuverture} onChange={v=>setP("genSeuilOuverture",v)} unit="h" step="0.5"/>
+                  <ParamRow label="Fermetures cinéma max" value={params.genNbFermetureCinema} onChange={v=>setP("genNbFermetureCinema",v)} unit="pers" step="1"/>
+                </div>
+                <div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#64748b",letterSpacing:"0.4px",marginBottom:10}}>OPTIONS</div>
+                  <ToggleRow label="Démarrer à l'heure d'ouverture" sub="Si la dispo commence avant le seuil, le quart part de l'ouverture même si la dispo commence après." param={params.genOuvertureFlexible} setParam={v=>setP("genOuvertureFlexible",v)}/>
+                  <div style={{marginTop:4}}/>
+                  <ToggleRow label="Écraser les quarts existants" sub="Lors d'une génération, les quarts déjà saisis pourront être remplacés." param={params.genEcraser} setParam={v=>setP("genEcraser",v)}/>
+                </div>
               </div>
-              {params.dispoFinCorrection&&<ParamRow label="Seuil de correction (fin < Xh)" value={params.dispoFinSeuil} onChange={v=>setP("dispoFinSeuil",v)} unit="h" step="1"/>}
-            </div>
-            <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:"#fee2e2"}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>IMPORT PDF</h3></div>
-              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
-                <div style={{flex:1,paddingRight:16}}><div style={{fontSize:12,color:"#475569",fontWeight:500}}>Ignorer les disponibilités en priorité 0</div><div style={{fontSize:10,color:"#94a3b8",marginTop:3,lineHeight:1.5}}>Les lignes de disponibilité dont le numéro de priorité est 0 ne seront pas importées.</div></div>
-                <div style={{display:"flex",gap:8,flexShrink:0}}><ToggleBtn val={true} cur={params.dispoSkipPrioZero} onClick={v=>setP("dispoSkipPrioZero",v)} label="Activé"/><ToggleBtn val={false} cur={params.dispoSkipPrioZero} onClick={v=>setP("dispoSkipPrioZero",v)} label="Désactivé"/></div>
+              <div style={{marginTop:16,borderTop:"1px solid #e2e8f0",paddingTop:16}}>
+                <ToggleRow label="Fermeture comptoir" sub="Raccourcit la fin du quart des équipiers au comptoir selon les règles ci-dessous." param={params.genFermetureComptoir} setParam={v=>setP("genFermetureComptoir",v)}/>
+                {params.genFermetureComptoir&&(
+                  <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"14px",marginTop:4}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+                      <div><div style={{fontSize:11,fontWeight:700,color:"#16a34a",marginBottom:8}}>SEUIL HAUT</div><ParamRow label={`Fermeture ≥`} value={params.genSeuilHaut} onChange={v=>setP("genSeuilHaut",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirHaut} onChange={v=>setP("genComptoirHaut",v)} unit="h" step="0.5"/></div>
+                      <div><div style={{fontSize:11,fontWeight:700,color:"#16a34a",marginBottom:8}}>SEUIL BAS</div><ParamRow label={`Entre X et ${params.genSeuilHaut}h`} value={params.genSeuilBas} onChange={v=>setP("genSeuilBas",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirBas} onChange={v=>setP("genComptoirBas",v)} unit="h" step="0.5"/></div>
+                    </div>
+                    <div style={{marginTop:8,fontSize:10,color:"#15803d",background:"#dcfce7",padding:"6px 10px",borderRadius:4}}>≥ {params.genSeuilHaut}h → comptoir à {params.genComptoirHaut}h &nbsp;·&nbsp; entre {params.genSeuilBas}h et {params.genSeuilHaut}h → comptoir à {params.genComptoirBas}h</div>
+                  </div>
+                )}
               </div>
-            </div>
-            <div style={{marginTop:32,background:"#f8fafc",border:"1px solid #e2e8f0",padding:"24px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><div style={{width:10,height:10,borderRadius:2,background:"#e2e8f0"}}/><h3 style={{margin:0,fontSize:14,fontWeight:700,color:"#1e293b"}}>FORMAT DES NOMBRES</h3></div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><span style={{fontSize:12,color:"#475569"}}>Séparateur décimal</span><div style={{display:"flex",gap:8}}><ToggleBtn val="," cur={sep} onClick={v=>setP("sepDecimal",v)} label="Virgule  1,5"/><ToggleBtn val="." cur={sep} onClick={v=>setP("sepDecimal",v)} label="Point  1.5"/></div></div>
-            </div>
+            </ParamSection>
+
+            <ParamSection label="IMPORT & DISPONIBILITÉS" color="#fef9c3">
+              <ToggleRow label="Corriger les fins de dispo en format 12h" sub={`Une fin saisie à ex. 11:00 sera convertie en 23:00 (ajout de 12h si inférieure au seuil). Corrige les erreurs de format AM.`} param={params.dispoFinCorrection} setParam={v=>setP("dispoFinCorrection",v)}/>
+              {params.dispoFinCorrection&&<ParamRow label="Seuil de correction (fin < Xh → +12h)" value={params.dispoFinSeuil} onChange={v=>setP("dispoFinSeuil",v)} unit="h" step="1"/>}
+              <div style={{marginTop:12}}/>
+              <ToggleRow label="Ignorer les disponibilités en priorité 0" sub="Lors de l'import PDF, les lignes associées au numéro de priorité 0 seront ignorées." param={params.dispoSkipPrioZero} setParam={v=>setP("dispoSkipPrioZero",v)}/>
+            </ParamSection>
+
+            <ParamSection label="FORMAT D'AFFICHAGE" color="#e2e8f0">
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div><div style={{fontSize:12,color:"#475569",fontWeight:500}}>Séparateur décimal</div><div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>Affichage des totaux (ex. 7,5 ou 7.5)</div></div>
+                <div style={{display:"flex",gap:8}}><ToggleBtn val="," cur={sep} onClick={v=>setP("sepDecimal",v)} label="Virgule  1,5"/><ToggleBtn val="." cur={sep} onClick={v=>setP("sepDecimal",v)} label="Point  1.5"/></div>
+              </div>
+            </ParamSection>
+
             <div style={{marginTop:24,display:"flex",justifyContent:"flex-end",gap:8}}>
-              <button onClick={()=>setParams(DEF_P)} style={{background:"none",border:"1.5px solid #e2e8f0",padding:"8px 18px",cursor:"pointer",fontSize:13,color:"#64748b",borderRadius:0}}>Réinitialiser</button>
-              <button onClick={()=>setPage("horaire")} style={{background:"#1e293b",border:"none",padding:"8px 18px",cursor:"pointer",fontSize:13,color:"#fff",fontWeight:600,borderRadius:0}}>← Retour</button>
+              <button onClick={()=>setParams(DEF_P)} style={{background:"none",border:"1.5px solid #e2e8f0",padding:"8px 18px",cursor:"pointer",fontSize:13,color:"#64748b",borderRadius:4}}>Réinitialiser</button>
+              <button onClick={()=>setPage("horaire")} style={{background:"#1e293b",border:"none",padding:"8px 18px",cursor:"pointer",fontSize:13,color:"#fff",fontWeight:600,borderRadius:4}}>← Retour</button>
             </div>
           </div>
         )}
-
-        {page==="dispo"&&(<>
+        {(page==="dispo"||page==="horaire")&&(<>
           <StickyHeader {...stickyProps}/>
-          <div style={{background:"#f1f2f6",boxShadow:"0 1px 6px rgba(0,0,0,.1)"}}>
-            <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/>
-              <tbody>
-                {emps.map((row,ri)=>{
-                  const dispo=getDispo(row),blk=isBlocked(row.particularite),bg=ri%2===0?"#f0f1f7":"#e0e1ed";
-                  return(<tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
-                    <PrioCell row={row}/>
-                    <td style={{padding:"4px 12px 4px 8px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><span style={{fontSize:13,fontWeight:600,color:"#1e293b"}}>{row.prenom}</span><span style={{fontSize:12,color:"#64748b"}}>{row.nom}</span></div></td>
-                    <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}><PartCell row={row} onChange={(f,v)=>setEmp(row.id,f,v)}/></td>
-                    {dispo.map((d,di)=>{
-                      const hasDispo=d.debut||d.fin,kD=rd(row.id,di,"debut"),kF=rd(row.id,di,"fin");
-                      return(<td key={di} style={{padding:"8px 6px",verticalAlign:"middle",textAlign:"center",...blS(di)}}>
-                        {blk?(<div style={{height:52,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:2,borderRadius:2,background:"#c8cdd8"}}/></div>):(
-                          <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
-                            <div style={{display:"flex",alignItems:"center",gap:4}}>
-                              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                                <input type="text" value={d.debut} ref={el=>refs.current[kD]=el} onChange={e=>updDispo(row.id,di,"debut",e.target.value)} onBlur={e=>{blurDispo(row.id,di,"debut",e.target.value);setDfk(null);}} onFocus={()=>setDfk(kD)} onClick={e=>e.target.select()} onKeyDown={e=>onKDDispo(e,row.id,di,"debut")} onPaste={e=>onPasteDispo(e,row.id,di)} maxLength={5} style={tiS(!!d.debut,"#fff",dfk===kD)}/>
-                                <div style={{width:16,height:1,background:"#e2e8f0"}}/>
-                                <input type="text" value={d.fin} ref={el=>refs.current[kF]=el} onChange={e=>updDispo(row.id,di,"fin",e.target.value)} onBlur={e=>{blurDispo(row.id,di,"fin",e.target.value);setDfk(null);}} onFocus={()=>setDfk(kF)} onClick={e=>e.target.select()} onKeyDown={e=>onKDDispo(e,row.id,di,"fin")} onPaste={e=>onPasteDispo(e,row.id,di)} maxLength={5} style={tiS(!!d.fin,"#fff",dfk===kF)}/>
-                              </div>
-                              <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",whiteSpace:"nowrap",visibility:hasDispo?"visible":"hidden",minWidth:20}}>{fmtHs(calcH(d.debut,d.fin))}</span>
-                            </div>
-                          </div>
-                        )}
-                      </td>);
-                    })}
-                    <TotalCell id={row.id}/><DeleteCell id={row.id}/>
-                  </tr>);
-                })}
-              </tbody>
-            </table>
-            <div style={{padding:"10px 18px",borderTop:"1px solid #d1d5db",background:"#f8fafc",fontSize:11,color:"#94a3b8"}}>💡 Inscris les heures de disponibilité. Les cases vides sont considérées comme indisponibles.</div>
-          </div>
+          {renderTable(page==="horaire")}
         </>)}
-
-        {page==="horaire"&&(<>
-          <StickyHeader {...stickyProps}/>
-          <div style={{background:"#f1f2f6",boxShadow:"0 1px 6px rgba(0,0,0,.1)"}}>
-            <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/>
-              <tbody>
-                {emps.map((row,ri)=>{
-                  const blk=isBlocked(row.particularite),bg=ri%2===0?"#f0f1f7":"#e0e1ed";
-                  const dispRow=getDispo(row);
-                  return(<tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
-                    <PrioCell row={row}/>
-                    <td style={{padding:"4px 12px 4px 8px",verticalAlign:"middle"}}><div style={{display:"flex",flexDirection:"column",gap:3}}><input placeholder="Prénom" value={row.prenom} onChange={e=>setEmp(row.id,"prenom",e.target.value)} style={niS}/><input placeholder="Nom" value={row.nom} onChange={e=>setEmp(row.id,"nom",e.target.value)} style={niSsub}/></div></td>
-                    <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}><span style={{fontSize:11,color:"#64748b"}}>{row.particularite||"—"}</span></td>
-                    {row.days.map((day,di)=>{
-                      const h=calcH(day.debut,day.fin),ch=cin[di];
-                      const mO=!!(day.debut&&day.debut===ch.ouverture),mC=!!(day.fin&&day.fin===ch.fermeture);
-                      const kD=rk(row.id,di,"debut"),kF=rk(row.id,di,"fin");
-                      const dDay=dispRow[di];
-                      return(<td key={di} style={{padding:"8px 6px",verticalAlign:"middle",textAlign:"center",...blS(di)}}>
-                        {blk?(<div style={{height:52,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:2,borderRadius:2,background:"#c8cdd8"}}/></div>):(
-                          <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
-                            <div style={{display:"flex",alignItems:"center",gap:4}}>
-                              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                                <input type="text" value={day.debut} ref={el=>refs.current[kD]=el} onChange={e=>updDay(row.id,di,"debut",e.target.value)} onBlur={e=>{blurDay(row.id,di,"debut",e.target.value);setFk(null);}} onFocus={()=>setFk(kD)} onClick={e=>e.target.select()} onKeyDown={e=>onKD(e,row.id,di,"debut")} onPaste={e=>onPaste(e,row.id,di)} maxLength={5} autoComplete="off" style={tiS(!!day.debut,mO?"#dbeafe":"#fff",fk===kD)} placeholder={!day.debut&&dDay.debut?dDay.debut:""}/>
-                                <div style={{width:16,height:1,background:"#e2e8f0"}}/>
-                                <input type="text" value={day.fin} ref={el=>refs.current[kF]=el} onChange={e=>updDay(row.id,di,"fin",e.target.value)} onBlur={e=>{blurDay(row.id,di,"fin",e.target.value);setFk(null);}} onFocus={()=>setFk(kF)} onClick={e=>e.target.select()} onKeyDown={e=>onKD(e,row.id,di,"fin")} maxLength={5} autoComplete="off" style={tiS(!!day.fin,mC?"#fff3e0":"#fff",fk===kF)} placeholder={!day.fin&&dDay.fin?dDay.fin:""}/>
-                              </div>
-                              <span style={{fontSize:10,fontWeight:700,color:h>0&&h<4?"#fb7185":"#94a3b8",whiteSpace:"nowrap",visibility:h>0?"visible":"hidden",minWidth:20}}>{fmtHs(h)}</span>
-                            </div>
-                          </div>
-                        )}
-                      </td>);
-                    })}
-                    <TotalCell id={row.id}/><DeleteCell id={row.id}/>
-                  </tr>);
-                })}
-              </tbody>
-              <tfoot>
-                <tr style={{borderTop:"2px solid #c8cdd8",background:"#f8fafc"}}>
-                  <td/><td style={{padding:"6px 12px 6px 8px",fontSize:10.5,fontWeight:700,color:"#94a3b8",letterSpacing:"0.5px"}}>TOTAL / JOUR</td>
-                  <td style={{borderLeft:"1px solid #c8cdd8"}}/>
-                  {dayTotals.map((h,di)=>(<td key={di} style={{textAlign:"center",padding:"10px 6px",...blS(di)}}>{h>0?<span style={{fontSize:12,fontWeight:700,color:"#475569"}}>{fmtH(h)}</span>:<span style={{color:"#e2e8f0"}}>—</span>}</td>))}
-                  <td style={{textAlign:"center",padding:"10px 8px"}}><span style={{fontSize:13,fontWeight:800,color:"#0f172a"}}>{fmtH(grand)||"—"}</span></td>
-                  <td/>
-                </tr>
-              </tfoot>
-            </table>
-            <div style={{padding:"12px 18px",borderTop:"1px solid #d1d5db"}}>
-              <button onClick={addEmp} style={{background:"none",border:"1.5px dashed #a0a8b8",borderRadius:0,padding:"8px 18px",fontSize:13,color:"#94a3b8",cursor:"pointer",display:"flex",alignItems:"center",gap:7,fontWeight:500}} onMouseEnter={e=>{e.currentTarget.style.borderColor="#2563eb";e.currentTarget.style.color="#2563eb";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#a0a8b8";e.currentTarget.style.color="#94a3b8";}}>
-                <span style={{fontSize:17,lineHeight:1}}>+</span> Ajouter un équipier
-              </button>
-            </div>
-          </div>
-        </>)}
-
       </div>
       {PanelRight}
     </div>
