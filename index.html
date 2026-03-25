@@ -505,6 +505,9 @@ function App(){
 
   const PanelLeft=(
     <div style={panelStyle}>
+      <div style={{padding:"10px 12px 6px",borderBottom:"1px solid #f1f5f9",textAlign:"center"}}>
+        <img src="./Logo_Cineplex_Divertissement.svg" alt="Cineplex" style={{width:"100%",maxHeight:36,objectFit:"contain"}}/>
+      </div>
       <PanelSection label="SEMAINE" first/>
       <div style={{padding:"8px 10px",borderBottom:"1px solid #f1f5f9"}}>
         {[{label:"Total semaine",value:fmtH(grand)||"0",color:"#0f172a"},{label:"Moy. / équipier",value:emps.length?(fmtH(grand/emps.length)||"0"):"—",color:"rgb(0,91,245)"}].map(({label,value,color},i)=>(
@@ -521,7 +524,7 @@ function App(){
         <div style={{textAlign:"center"}}><div style={{fontSize:11,fontWeight:700,color:"#0f172a"}}>Sem. {iw}</div><div style={{fontSize:9,color:"#94a3b8",marginTop:2}}>{fmt(ws,true)}</div></div>
         <button onClick={()=>setWs(d=>addD(d,7))} style={{background:"none",border:"1.5px solid #e2e8f0",cursor:"pointer",fontSize:14,color:"#64748b",padding:"4px 8px",lineHeight:1,borderRadius:3}}>›</button>
       </div>
-      {savedOk!==null&&<div style={{padding:"4px 10px",borderTop:"1px solid #f1f5f9",textAlign:"center",fontSize:10,color:savedOk?"#86efac":"#fca5a5"}}>{savedOk?"💾 Sauvegarde active":"⚠️ Indisponible"}</div>}
+      {savedOk!==null&&<div style={{padding:"4px 10px",borderTop:"1px solid #f1f5f9",textAlign:"center",fontSize:10,color:"#0f172a"}}>{savedOk?"💾 Sauvegarde active":"⚠️ Indisponible"}</div>}
     </div>
   );
 
