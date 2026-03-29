@@ -253,6 +253,9 @@ function App(){
   const hist=useRef([]),fut=useRef([]),before=useRef(null);
   const cinHist=useRef([]),cinFut=useRef([]),cinBefore=useRef(null);
 
+  // Retire l'écran de chargement dès le premier render
+  useEffect(()=>{const ld=document.getElementById("loading");if(ld)ld.remove();},[]);
+
   useEffect(()=>{(async()=>{
     const[sc,se,sp]=await Promise.all([stoLoad(SK.cin),stoLoad(SK.eff),stoLoad(SK.parts)]);
     if(sc&&sc.length===7)setCin(sc);if(se&&se.length===7)setEff(se);
