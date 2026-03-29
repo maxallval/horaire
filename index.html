@@ -8,19 +8,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <style>
-#loading{position:fixed;inset:0;background:rgb(14,27,52);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;}
-#loading img{width:160px;opacity:.9;}
-#loading-bar{width:200px;height:3px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;}
-#loading-bar-inner{height:100%;width:0%;background:rgb(0,91,245);border-radius:2px;animation:load 1.2s ease-in-out forwards;}
-@keyframes load{0%{width:0%}60%{width:75%}100%{width:95%}}
-</style>
-<style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter','Segoe UI',sans-serif;background:rgb(14,27,52);min-height:100vh;}
 input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{-webkit-appearance:none;}
 input[type=number]{-moz-appearance:textfield;}
 select{-webkit-appearance:none;-moz-appearance:none;}
 input::placeholder{color:#a0a8b8;opacity:1;}
+#loading{position:fixed;inset:0;background:rgb(14,27,52);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;}
+#loading img{width:160px;opacity:.9;}
+#loading-bar{width:200px;height:3px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;}
+#loading-bar-inner{height:100%;width:0%;background:rgb(0,91,245);border-radius:2px;animation:ld 1.4s ease-in-out forwards;}
+@keyframes ld{0%{width:0%}60%{width:75%}100%{width:95%}}
 </style>
 </head>
 <body>
@@ -32,6 +30,7 @@ input::placeholder{color:#a0a8b8;opacity:1;}
 <script type="text/babel">
 const {useState,useRef,useMemo,useCallback,useEffect}=React;
 
+// ─── Constants ────────────────────────────────────────────────────────────────
 const DAYS=["Vendredi","Samedi","Dimanche","Lundi","Mardi","Mercredi","Jeudi"];
 const DS=["VEN","SAM","DIM","LUN","MAR","MER","JEU"];
 const PARTS=[{value:"",label:"—"},{value:"Vacances",label:"Vacances"},{value:"Sans solde",label:"Sans solde"},{value:"Max heures",label:"Heures Max"},{value:"Personnalisé",label:"Personnalisé"}];
@@ -49,7 +48,7 @@ const DEF_P={
 const BOOL_PARAMS=new Set(["sepDecimal","tolEffOn","genEcraser","genFermetureComptoir","genOuvertureFlexible","dispoFinCorrection","dispoSkipPrioZero"]);
 const SK={cin:"horaire:cin",eff:"horaire:eff",parts:"horaire:parts"};
 
-// ─── Lazy PDF.js loader ───────────────────────────────────────────────────────
+// ─── Lazy PDF.js ──────────────────────────────────────────────────────────────
 let _pdfReady=null;
 const loadPDF=()=>{
   if(_pdfReady)return _pdfReady;
@@ -60,7 +59,10 @@ const loadPDF=()=>{
     s.onerror=reject;document.head.appendChild(s);
   });
   return _pdfReady;
-};async(k,v)=>{
+};
+
+// ─── Storage ──────────────────────────────────────────────────────────────────
+const stoSave=async(k,v)=>{
   try{
     if(window.storage)return !!(await window.storage.set(k,JSON.stringify(v)));
     localStorage.setItem(k,JSON.stringify(v));return true;
@@ -73,6 +75,7 @@ const stoLoad=async k=>{
   }catch{return null;}
 };
 
+// ─── Utils ────────────────────────────────────────────────────────────────────
 const addD=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
 const fmt=(d,s=false)=>d.toLocaleDateString("fr-CA",s?{day:"2-digit",month:"short"}:{day:"numeric",month:"long"});
 const toH=t=>{if(!t)return null;const[h,m]=t.split(":").map(Number);return h+(m||0)/60;};
@@ -98,6 +101,7 @@ const nextFri=()=>{const t=new Date(),f=new Date(t);f.setDate(t.getDate()+(5-t.g
 const filterEmpty=rows=>{const keep=rows[0].reduce((a,_,ci)=>{if(rows.some(r=>r[ci]&&r[ci].trim()))a.push(ci);return a;},[]);return rows.map(r=>keep.map(ci=>r[ci]||""));};
 const selAll=e=>e.target.select();
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const selS={border:"none",fontSize:12,color:"#475569",background:"transparent",outline:"none",cursor:"pointer",appearance:"none",textAlign:"center",fontWeight:500,width:"100%"};
 const uSty={border:"none",borderBottom:"1px solid #94a3b8",padding:"1px 2px",fontSize:12,outline:"none",color:"#334155",background:"transparent"};
 const niS={display:"block",width:"100%",border:"none",padding:0,fontSize:13,fontWeight:600,color:"#1e293b",background:"transparent",outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
@@ -110,6 +114,7 @@ const effS=(exact,close,below,above)=>({border:`1px solid ${exact?"#16a34a":clos
 const prioS={width:26,textAlign:"center",border:"1px solid #e2e8f0",borderRadius:3,padding:"2px",fontSize:11,fontWeight:700,color:"#94a3b8",outline:"none",background:"transparent"};
 const panelStyle={position:"sticky",top:24,zIndex:100,width:178,background:"#fff",boxShadow:"0 4px 20px rgba(0,0,0,.18)",border:"1.5px solid #e2e8f0",display:"flex",flexDirection:"column",overflow:"hidden",flexShrink:0};
 
+// ─── Seed data ────────────────────────────────────────────────────────────────
 let uid=1;
 const mkE=(prio="")=>({id:uid++,prenom:"",nom:"",particularite:"",maxH:"",noteP:"",prio,days:DAYS.map(()=>({debut:"",fin:""})),dispo:mkDispo()});
 const EMPS=[
@@ -131,6 +136,7 @@ const TEST_EFF=[{jour:"3,5",soir:"3"},{jour:"7",soir:"4"},{jour:"6,5",soir:"4"},
 const DEF_CIN=DAYS.map(()=>({ouverture:"10:00",fermeture:"23:00"}));
 const DEF_EFF=DAYS.map(()=>({jour:"",soir:""}));
 
+// ─── Static components ────────────────────────────────────────────────────────
 const Cols=()=>(<colgroup><col style={{width:CPR}}/><col style={{width:CE}}/><col style={{width:CP}}/>{DAYS.map((_,i)=><col key={i} style={{width:CD}}/>)}<col style={{width:CT}}/><col style={{width:CX}}/></colgroup>);
 const ToggleBtn=({val,cur,onClick,label})=>{const on=cur===val;return <button onClick={()=>onClick(val)} style={{padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:0,border:`1.5px solid ${on?"#1e293b":"#e2e8f0"}`,background:on?"#1e293b":"#fff",color:on?"#fff":"#475569"}}>{label}</button>;};
 const PartSelect=({value,onChange})=>(<select value={value} onChange={e=>onChange("particularite",e.target.value)} style={selS}>{PARTS.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select>);
@@ -165,11 +171,9 @@ function PartCell({row,onChange}){
 function ParamRow({label,value,onChange,unit,step}){
   return(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:12,color:"#475569",flex:1}}>{label}</span><div style={{display:"flex",alignItems:"center",gap:6}}><input type="number" value={value} onChange={e=>onChange(e.target.value)} onFocus={selAll} step={step||"0.1"} style={{border:"1px solid #e2e8f0",padding:"4px 10px",fontSize:13,fontWeight:600,color:"#0f172a",width:90,outline:"none",borderRadius:4}}/><span style={{fontSize:11,color:"#94a3b8",minWidth:16}}>{unit}</span></div></div>);
 }
-
 function ToggleRow({label,sub,param,setParam}){
   return(<div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}><div style={{flex:1,paddingRight:16}}><div style={{fontSize:12,color:"#475569",fontWeight:500}}>{label}</div>{sub&&<div style={{fontSize:10,color:"#94a3b8",marginTop:3,lineHeight:1.5}}>{sub}</div>}</div><div style={{display:"flex",gap:8,flexShrink:0}}><ToggleBtn val={true} cur={param} onClick={setParam} label="Activé"/><ToggleBtn val={false} cur={param} onClick={setParam} label="Désactivé"/></div></div>);
 }
-
 function ParamSection({label,color,children}){
   return(<div style={{marginTop:28,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,overflow:"hidden"}}><div style={{padding:"12px 20px",background:"#fff",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",gap:10}}><div style={{width:10,height:10,borderRadius:3,background:color,flexShrink:0}}/><h3 style={{margin:0,fontSize:13,fontWeight:700,color:"#1e293b",letterSpacing:"0.3px"}}>{label}</h3></div><div style={{padding:"20px"}}>{children}</div></div>);
 }
@@ -199,6 +203,7 @@ function StickyHeader({cin,eff,effCalcs,wd,params,cfk,setCfk,cinRefs,updCin,blur
   </div>);
 }
 
+// ─── PDF parser ───────────────────────────────────────────────────────────────
 async function parsePDF(file,emps,getDispo,skipPrioZero=true){
   await loadPDF();
   const buf=await file.arrayBuffer();
@@ -232,6 +237,7 @@ async function parsePDF(file,emps,getDispo,skipPrioZero=true){
   return{newEmps,matched};
 }
 
+// ─── App ──────────────────────────────────────────────────────────────────────
 function App(){
   const[ws,setWs]=useState(nextFri);
   const[emps,setEmps]=useState(EMPS);
@@ -253,7 +259,7 @@ function App(){
   const hist=useRef([]),fut=useRef([]),before=useRef(null);
   const cinHist=useRef([]),cinFut=useRef([]),cinBefore=useRef(null);
 
-  // Retire l'écran de chargement dès le premier render
+  // Retire l'écran de chargement au premier render
   useEffect(()=>{const ld=document.getElementById("loading");if(ld)ld.remove();},[]);
 
   useEffect(()=>{(async()=>{
@@ -266,13 +272,24 @@ function App(){
   useEffect(()=>{if(loaded)stoSave(SK.eff,eff);},[eff,loaded]);
   useEffect(()=>{if(!loaded)return;const p={};emps.forEach(e=>{p[e.id]={particularite:e.particularite,maxH:e.maxH,noteP:e.noteP,prio:e.prio};});stoSave(SK.parts,p);},[emps,loaded]);
 
+  // ── Derived ──
   const sep=params.sepDecimal;
   const fmtH=useCallback(h=>fmtDec(h,sep),[sep]);
+
+  // getRawDispo : valeur brute pour l'affichage dans l'éditeur de dispos
+  const getRawDispo=useCallback(emp=>emp.dispo&&emp.dispo.length===7?emp.dispo:mkDispo(),[]);
+
+  // getDispo : valeur corrigée (+12h si AM) pour la génération et les placeholders
   const getDispo=useCallback(emp=>{
-    const d=emp.dispo&&emp.dispo.length===7?emp.dispo:mkDispo();
+    const d=getRawDispo(emp);
     if(!params.dispoFinCorrection)return d;
-    return d.map(day=>{if(!day.fin)return day;const h=toH(day.fin);return h!==null&&h<params.dispoFinSeuil?{...day,fin:toStr(h+12)}:day;});
-  },[params.dispoFinCorrection,params.dispoFinSeuil]);
+    return d.map(day=>{
+      if(!day.fin)return day;
+      const h=toH(day.fin);
+      return h!==null&&h<params.dispoFinSeuil?{...day,fin:toStr(h+12)}:day;
+    });
+  },[getRawDispo,params.dispoFinCorrection,params.dispoFinSeuil]);
+
   const getMaxH=useCallback(emp=>emp.particularite==="Max heures"&&emp.maxH?parseFloat(emp.maxH):params.genMaxHeures,[params.genMaxHeures]);
   const empIdx=useMemo(()=>{const m={};emps.forEach((e,i)=>m[e.id]=i);return m;},[emps]);
   const rowTotals=useMemo(()=>{const m={};emps.forEach(e=>{m[e.id]=e.days.reduce((s,d)=>s+calcH(d.debut,d.fin),0);});return m;},[emps]);
@@ -298,6 +315,7 @@ function App(){
     if(fH>=params.genSeuilHaut)return toStr(params.genComptoirHaut);if(fH>=params.genSeuilBas)return toStr(params.genComptoirBas);return ferStr;
   },[params.genFermetureComptoir,params.genSeuilHaut,params.genComptoirHaut,params.genSeuilBas,params.genComptoirBas]);
 
+  // ── Undo/redo ──
   const cap=l=>{if(before.current===null)before.current=JSON.stringify(l);};
   const commit=()=>{if(before.current!==null){hist.current.push(before.current);if(hist.current.length>50)hist.current.shift();fut.current=[];before.current=null;}};
   const undo=()=>{commit();if(!hist.current.length)return;setEmps(c=>{fut.current.push(JSON.stringify(c));return JSON.parse(hist.current.pop());});};
@@ -307,6 +325,7 @@ function App(){
   const undoCin=()=>{commitCin();if(!cinHist.current.length)return;setCin(c=>{cinFut.current.push(JSON.stringify(c));return JSON.parse(cinHist.current.pop());});};
   const redoCin=()=>{if(!cinFut.current.length)return;setCin(c=>{cinHist.current.push(JSON.stringify(c));return JSON.parse(cinFut.current.pop());});};
 
+  // ── Mutators ──
   const updDay=(id,di,f,v)=>setEmps(l=>{cap(l);return l.map(x=>x.id!==id?x:{...x,days:x.days.map((d,i)=>i===di?{...d,[f]:v}:d)});});
   const blurDay=(id,di,f,v)=>{commit();const n=normT(v);setEmps(l=>l.map(x=>x.id!==id?x:{...x,days:x.days.map((d,i)=>i===di?{...d,[f]:n}:d)}));};
   const delDay=(id,di,f)=>setEmps(l=>{cap(l);commit();return l.map(x=>x.id!==id?x:{...x,days:x.days.map((d,i)=>i===di?{...d,[f]:""}:d)});});
@@ -329,6 +348,7 @@ function App(){
   const effacerHoraire=()=>{if(!confirmHoraire){setConfirmHoraire(true);setTimeout(()=>setConfirmHoraire(false),3000);return;}cap(emps);setEmps(l=>l.map(e=>({...e,days:DAYS.map(()=>({debut:"",fin:""}))})));commit();setConfirmHoraire(false);showMsg("Horaire effacé");};
   const effacerDispos=()=>{if(!confirmDispo){setConfirmDispo(true);setTimeout(()=>setConfirmDispo(false),3000);return;}setEmps(l=>l.map(e=>({...e,dispo:mkDispo()})));setConfirmDispo(false);showMsg("Disponibilités effacées");};
 
+  // ── Navigation ──
   const rk=(eid,di,f)=>`${eid}-${di}-${f}`;
   const rd=(eid,di,f)=>`d-${eid}-${di}-${f}`;
   const ck=(di,f)=>`cin-${di}-${f}`;
@@ -368,13 +388,15 @@ function App(){
     if((e.key==="Delete"||e.key==="Backspace")&&v){e.preventDefault();updDispo(eid,di,f,"");}
   };
 
+  // ── Paste ──
   const getCell=(row,c,il,isF)=>{if(!row)return"";const val=il?row[c*2+(isF?1:0)]:row[c];return val?val.trim():"";};
   const splitPaste=(text,di)=>{const rows=text.trimEnd().split("\n").map(r=>r.split("\t"));const f=filterEmpty(rows);return{filtered:f,interleaved:f[0].length>=(7-di)*2};};
   const onPaste=(e,eid,di)=>{const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();const{filtered:f,interleaved:il}=splitPaste(text,di);const s=empIdx[eid];setEmps(l=>{cap(l);const next=l.map((x,ei)=>{const ri=ei-s;if(ri<0)return x;let dR,fR;if(il){if(ri>=f.length)return x;dR=fR=f[ri];}else{const b=ri*2;if(b>=f.length)return x;dR=f[b];fR=f[b+1]||[];}const nd=x.days.map((day,dj)=>{if(dj<di)return day;const c=dj-di;return{debut:normT(getCell(dR,c,il,false))||day.debut,fin:normT(getCell(il?dR:fR,c,il,true))||day.fin};});return{...x,days:nd};});commit();return next;});};
-  const onPasteDispo=(e,eid,di)=>{const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();const{filtered:f,interleaved:il}=splitPaste(text,di);const s=empIdx[eid];const rawDispo=emp=>emp.dispo&&emp.dispo.length===7?emp.dispo:mkDispo();setEmps(l=>l.map((x,ei)=>{const ri=ei-s;if(ri<0)return x;let dR,fR;if(il){if(ri>=f.length)return x;dR=fR=f[ri];}else{const b=ri*2;if(b>=f.length)return x;dR=f[b];fR=f[b+1]||[];}const nd=rawDispo(x).map((d,dj)=>{if(dj<di)return d;const c=dj-di;return{debut:normT(getCell(dR,c,il,false))||d.debut,fin:normT(getCell(il?dR:fR,c,il,true))||d.fin};});return{...x,dispo:nd};}));};
+  const onPasteDispo=(e,eid,di)=>{const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();const{filtered:f,interleaved:il}=splitPaste(text,di);const s=empIdx[eid];setEmps(l=>l.map((x,ei)=>{const ri=ei-s;if(ri<0)return x;let dR,fR;if(il){if(ri>=f.length)return x;dR=fR=f[ri];}else{const b=ri*2;if(b>=f.length)return x;dR=f[b];fR=f[b+1]||[];}const nd=getRawDispo(x).map((d,dj)=>{if(dj<di)return d;const c=dj-di;return{debut:normT(getCell(dR,c,il,false))||d.debut,fin:normT(getCell(il?dR:fR,c,il,true))||d.fin};});return{...x,dispo:nd};}));};
   const onPasteCin=(e,di)=>{const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();const f=filterEmpty(text.trimEnd().split("\n").map(r=>r.split("\t")));const oR=f[0]||[],fR=f[1]||[];capCin(cin);setCin(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;return{ouverture:normT((oR[c]||"").trim())||x.ouverture,fermeture:normT((fR[c]||"").trim())||x.fermeture};}));commitCin();};
   const onPasteEff=(e,di)=>{const text=e.clipboardData.getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;e.preventDefault();const f=filterEmpty(text.trimEnd().split("\n").map(r=>r.split("\t")));const il=f[0].length>=(7-di)*2,jR=f[0]||[],sR=f[1]||[];setEff(l=>l.map((x,i)=>{if(i<di)return x;const c=i-di;return{jour:il?((jR[c*2]||"").trim()):((jR[c]||"").trim())||x.jour,soir:il?((jR[c*2+1]||"").trim()):((sR[c]||"").trim())||x.soir};}));};
 
+  // ── Day cache ─────────────────────────────────────────────────────────────
   const mkDayCache=(di,newDays)=>{
     const ch=cin[di];if(!ch.ouverture||!ch.fermeture)return null;
     const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture);if(ouvH===null||ferH===null)return null;
@@ -419,14 +441,7 @@ function App(){
 
   const runPrioriteFermeture=newDays=>{
     let assigns=0;
-    for(let di=0;di<7;di++){
-      const ch=cin[di];if(!ch.ouverture||!ch.fermeture)continue;const ferH=toH(ch.fermeture);
-      if(newDays.some((_,i)=>{const f=toH(newDays[i][di].fin);return f!==null&&f>=ferH-EPS;}))continue;
-      let prio=-1;
-      for(let ei=0;ei<emps.length;ei++){const emp=emps[ei];if(isBlocked(emp.particularite))continue;if(newDays[ei][di].debut||newDays[ei][di].fin)continue;const disp=getDispo(emp),df=disp[di].fin?toH(disp[di].fin):null;if(df===null||df<ferH-EPS)continue;const h=calcH("18:00",toStr(ferH));const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);if(h<params.genMinQuart||wt+h>getMaxH(emp))continue;newDays[ei][di]={debut:"18:00",fin:toStr(ferH)};prio=ei;assigns++;break;}
-      if(prio<0)continue;
-      for(let ei=emps.length-1;ei>=0;ei--){if(ei===prio||isBlocked(emps[ei].particularite))continue;const day=newDays[ei][di];if(!day.debut||!day.fin)continue;if(toH(day.fin)<params.soirDebut-EPS)continue;if(toH(day.debut)<18-EPS){if(calcH(day.debut,"18:00")>=params.genMinQuart)newDays[ei][di]={debut:day.debut,fin:"18:00"};else newDays[ei][di]={debut:"",fin:""};} else newDays[ei][di]={debut:"",fin:""};break;}
-    }
+    for(let di=0;di<7;di++){const ch=cin[di];if(!ch.ouverture||!ch.fermeture)continue;const ferH=toH(ch.fermeture);if(newDays.some((_,i)=>{const f=toH(newDays[i][di].fin);return f!==null&&f>=ferH-EPS;}))continue;let prio=-1;for(let ei=0;ei<emps.length;ei++){const emp=emps[ei];if(isBlocked(emp.particularite))continue;if(newDays[ei][di].debut||newDays[ei][di].fin)continue;const disp=getDispo(emp),df=disp[di].fin?toH(disp[di].fin):null;if(df===null||df<ferH-EPS)continue;const h=calcH("18:00",toStr(ferH));const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);if(h<params.genMinQuart||wt+h>getMaxH(emp))continue;newDays[ei][di]={debut:"18:00",fin:toStr(ferH)};prio=ei;assigns++;break;}if(prio<0)continue;for(let ei=emps.length-1;ei>=0;ei--){if(ei===prio||isBlocked(emps[ei].particularite))continue;const day=newDays[ei][di];if(!day.debut||!day.fin)continue;if(toH(day.fin)<params.soirDebut-EPS)continue;if(toH(day.debut)<18-EPS){if(calcH(day.debut,"18:00")>=params.genMinQuart)newDays[ei][di]={debut:day.debut,fin:"18:00"};else newDays[ei][di]={debut:"",fin:""};} else newDays[ei][di]={debut:"",fin:""};break;}}
     return assigns;
   };
 
@@ -459,15 +474,7 @@ function App(){
 
   const genererEtirer=(heure,sens)=>{
     const newDays=emps.map(e=>e.days.map(d=>({...d})));let assigns=0;
-    for(let di=0;di<7;di++){
-      const ch=cin[di];if(!ch.ouverture||!ch.fermeture)continue;const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture);
-      const jT=parseFloat((eff[di].jour||"").replace(",","."))||0,sT=parseFloat((eff[di].soir||"").replace(",","."))||0;
-      const target=sens==="debut"?jT:sT;if(!target)continue;
-      if(sens==="debut"&&jT>0&&Number.isInteger(jT))continue;if(sens==="fin"&&sT>0&&Number.isInteger(sT))continue;
-      const getCur=()=>{const thr=ouvH+params.jourDecalage;let jour=0,soir=0;for(let i=0;i<emps.length;i++){if(isBlocked(emps[i].particularite))continue;const d=toH(newDays[i][di].debut),f=toH(newDays[i][di].fin);if(d!==null){if(d<thr)jour+=1;else if(d<params.jourLimite)jour+=params.jourPoids;}if(f!==null){if(f>=params.soirDebut&&f<=params.soirLimite)soir+=params.soirPoids;else if(f>params.soirLimite)soir+=1;}}return{jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};};
-      if((sens==="debut"?getCur().jour:getCur().soir)>=target-EPS)continue;
-      for(let ei=0;ei<emps.length;ei++){const emp=emps[ei];if(isBlocked(emp.particularite))continue;const day=newDays[ei][di];if(!day.debut||!day.fin)continue;const disp=getDispo(emp);const dH=disp[di].debut?toH(disp[di].debut):null,fH=disp[di].fin?toH(disp[di].fin):null;const empDebut=dH!==null?dH:ouvH,empFin=fH!==null?fH:ferH;const oldH=calcH(day.debut,day.fin);const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);if(sens==="debut"){if(toH(day.debut)<=heure+EPS||empDebut>heure+EPS)continue;if(wt-oldH+calcH(toStr(heure),day.fin)>getMaxH(emp))continue;newDays[ei][di]={debut:toStr(heure),fin:day.fin};}else{if(toH(day.fin)>=heure-EPS||empFin<heure-EPS)continue;if(wt-oldH+calcH(day.debut,toStr(heure))>getMaxH(emp))continue;newDays[ei][di]={debut:day.debut,fin:toStr(heure)};}assigns++;if((sens==="debut"?getCur().jour:getCur().soir)>=target-EPS)break;}
-    }
+    for(let di=0;di<7;di++){const ch=cin[di];if(!ch.ouverture||!ch.fermeture)continue;const ouvH=toH(ch.ouverture),ferH=toH(ch.fermeture);const jT=parseFloat((eff[di].jour||"").replace(",","."))||0,sT=parseFloat((eff[di].soir||"").replace(",","."))||0;const target=sens==="debut"?jT:sT;if(!target)continue;if(sens==="debut"&&jT>0&&Number.isInteger(jT))continue;if(sens==="fin"&&sT>0&&Number.isInteger(sT))continue;const getCur=()=>{const thr=ouvH+params.jourDecalage;let jour=0,soir=0;for(let i=0;i<emps.length;i++){if(isBlocked(emps[i].particularite))continue;const d=toH(newDays[i][di].debut),f=toH(newDays[i][di].fin);if(d!==null){if(d<thr)jour+=1;else if(d<params.jourLimite)jour+=params.jourPoids;}if(f!==null){if(f>=params.soirDebut&&f<=params.soirLimite)soir+=params.soirPoids;else if(f>params.soirLimite)soir+=1;}}return{jour:Math.round(jour*10)/10,soir:Math.round(soir*10)/10};};if((sens==="debut"?getCur().jour:getCur().soir)>=target-EPS)continue;for(let ei=0;ei<emps.length;ei++){const emp=emps[ei];if(isBlocked(emp.particularite))continue;const day=newDays[ei][di];if(!day.debut||!day.fin)continue;const disp=getDispo(emp);const dH=disp[di].debut?toH(disp[di].debut):null,fH=disp[di].fin?toH(disp[di].fin):null;const empDebut=dH!==null?dH:ouvH,empFin=fH!==null?fH:ferH;const oldH=calcH(day.debut,day.fin);const wt=newDays[ei].reduce((s,dd)=>s+calcH(dd.debut,dd.fin),0);if(sens==="debut"){if(toH(day.debut)<=heure+EPS||empDebut>heure+EPS)continue;if(wt-oldH+calcH(toStr(heure),day.fin)>getMaxH(emp))continue;newDays[ei][di]={debut:toStr(heure),fin:day.fin};}else{if(toH(day.fin)>=heure-EPS||empFin<heure-EPS)continue;if(wt-oldH+calcH(day.debut,toStr(heure))>getMaxH(emp))continue;newDays[ei][di]={debut:day.debut,fin:toStr(heure)};}assigns++;if((sens==="debut"?getCur().jour:getCur().soir)>=target-EPS)break;}}
     cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();showMsg(`${assigns} quart${assigns!==1?"s":""} modifié${assigns!==1?"s":""}`);setPage("horaire");
   };
 
@@ -478,6 +485,7 @@ function App(){
     if(assigns>0){cap(emps);setEmps(emps.map((e,i)=>({...e,days:newDays[i]})));commit();showMsg(`${assigns} quart${assigns!==1?"s":""} 4h assigné${assigns!==1?"s":""}`);}else showMsg("Aucun quart 4h possible");
   };
 
+  // ── Render helpers ────────────────────────────────────────────────────────
   const TotalCell=({id})=>{const tot=rowTotals[id],row=emps[empIdx[id]];const maxH=row&&row.particularite==="Max heures"&&row.maxH?parseFloat(row.maxH):null;const tc=totColor(tot,maxH);return(<td style={{textAlign:"center",verticalAlign:"middle",padding:"10px 8px"}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,minHeight:36}}><span style={{fontSize:14,fontWeight:800,visibility:tot>0?"visible":"hidden",color:tc}}>{fmtH(tot)||"0"}</span><div style={{width:36,height:3,borderRadius:2,background:"#d1d5db",overflow:"hidden"}}><div style={{width:`${Math.min(100,(tot/(maxH||40))*100)}%`,height:"100%",background:tc,borderRadius:2}}/></div></div></td>);};
   const DeleteCell=({id})=>(<td style={{textAlign:"center",verticalAlign:"middle",padding:"0 6px"}}><button onClick={()=>remEmp(id)} style={{background:"none",border:"none",cursor:"pointer",color:"#c8cdd8",fontSize:14,padding:4}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#c8cdd8"}>×</button></td>);
   const rstS=act=>({border:"none",borderBottom:"1px solid #f1f5f9",padding:"9px 10px",cursor:"pointer",fontSize:11,fontWeight:600,width:"100%",textAlign:"left",background:act?"#fef2f2":"#fff",color:act?"#dc2626":"#475569"});
@@ -486,7 +494,10 @@ function App(){
 
   const renderCells=(row,di,day,isHoraire)=>{
     if(isBlocked(row.particularite))return <div style={{height:52,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:2,borderRadius:2,background:"#c8cdd8"}}/></div>;
-    const dispRow=getDispo(row),dDay=dispRow[di];
+    // Horaire: afficher la dispo corrigée en placeholder
+    // Dispos: afficher la valeur brute (sans correction)
+    const dispRow=isHoraire?getDispo(row):getRawDispo(row);
+    const dDay=dispRow[di];
     if(isHoraire){
       const h=calcH(day.debut,day.fin),ch=cin[di],mO=!!(day.debut&&day.debut===ch.ouverture),mC=!!(day.fin&&day.fin===ch.fermeture);
       const kD=rk(row.id,di,"debut"),kF=rk(row.id,di,"fin");
@@ -502,6 +513,7 @@ function App(){
       <table style={{width:TW,borderCollapse:"collapse",tableLayout:"fixed"}}><Cols/><tbody>
         {emps.map((row,ri)=>{
           const bg=ri%2===0?"#f0f1f7":"#e0e1ed";
+          const rowData=isHoraire?row.days:getRawDispo(row);
           return(<tr key={row.id} style={{borderTop:"1px solid #a0a8b8",background:bg,height:60}}>
             <PrioCell prio={row.prio} onCommit={v=>setEmp(row.id,"prio",v)}/>
             {isHoraire
@@ -511,7 +523,7 @@ function App(){
             <td style={{padding:"4px 8px",verticalAlign:"middle",textAlign:"center",borderLeft:"1px solid #c8cdd8"}}>
               {isHoraire?<span style={{fontSize:11,color:"#64748b"}}>{row.particularite||"—"}</span>:<PartCell row={row} onChange={(f,v)=>setEmp(row.id,f,v)}/>}
             </td>
-            {(isHoraire?row.days:getDispo(row)).map((day,di)=>(
+            {rowData.map((day,di)=>(
               <td key={di} style={{padding:"8px 6px",verticalAlign:"middle",textAlign:"center",...blS(di)}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>{renderCells(row,di,day,isHoraire)}</div>
               </td>
@@ -527,6 +539,7 @@ function App(){
     </div>
   );
 
+  // ── Side panels ───────────────────────────────────────────────────────────
   const PanelLeft=(
     <div style={panelStyle}>
       <div style={{padding:"4px 4px",borderBottom:"1px solid #f1f5f9",textAlign:"center"}}>
@@ -585,6 +598,7 @@ function App(){
     </div>
   );
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return(
     <div style={{fontFamily:"'Inter','Segoe UI',sans-serif",background:"rgb(14,27,52)",minHeight:"100vh",padding:"24px 12px",display:"flex",justifyContent:"center",gap:12,alignItems:"flex-start"}}>
       <input ref={importRef} type="file" accept=".pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])handleImport(e.target.files[0]);e.target.value="";}}/>
@@ -597,7 +611,6 @@ function App(){
           <div style={{background:"#fff",boxShadow:"0 1px 6px rgba(0,0,0,.1)",padding:"32px",borderRadius:4}}>
             <h2 style={{margin:"0 0 6px",fontSize:18,fontWeight:800,color:"#0f172a"}}>⚙️ Paramètres</h2>
             <p style={{fontSize:12,color:"#94a3b8",marginBottom:4}}>Contrôle le calcul des effectifs, la génération automatique et l'import des disponibilités.</p>
-
             <ParamSection label="CALCUL DES EFFECTIFS" color="#dbeafe">
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:16}}>
                 <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:6,padding:"14px"}}>
@@ -605,28 +618,19 @@ function App(){
                   <ParamRow label="Décalage après ouverture" value={params.jourDecalage} onChange={v=>setP("jourDecalage",v)} unit="h" step="0.5"/>
                   <ParamRow label="Heure limite journée" value={params.jourLimite} onChange={v=>setP("jourLimite",v)} unit="h" step="0.5"/>
                   <ParamRow label="Pondération intermédiaire" value={params.jourPoids} onChange={v=>setP("jourPoids",v)} unit="×" step="0.25"/>
-                  <div style={{marginTop:8,fontSize:10,color:"#1d4ed8",lineHeight:1.7,padding:"8px",background:"#dbeafe",borderRadius:4}}>
-                    Début &lt; ouverture + {params.jourDecalage}h → <b>1×</b><br/>
-                    Début entre {params.jourDecalage}h et {params.jourLimite}h → <b>{params.jourPoids}×</b><br/>
-                    Début après {params.jourLimite}h → <b>0×</b>
-                  </div>
+                  <div style={{marginTop:8,fontSize:10,color:"#1d4ed8",lineHeight:1.7,padding:"8px",background:"#dbeafe",borderRadius:4}}>Début &lt; ouverture + {params.jourDecalage}h → <b>1×</b><br/>Début entre {params.jourDecalage}h et {params.jourLimite}h → <b>{params.jourPoids}×</b><br/>Début après {params.jourLimite}h → <b>0×</b></div>
                 </div>
                 <div style={{background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:6,padding:"14px"}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#ea580c",letterSpacing:"0.5px",marginBottom:10}}>TRANCHE SOIR</div>
                   <ParamRow label="Début tranche soir basse" value={params.soirDebut} onChange={v=>setP("soirDebut",v)} unit="h" step="0.5"/>
                   <ParamRow label="Fin tranche soir basse" value={params.soirLimite} onChange={v=>setP("soirLimite",v)} unit="h" step="0.5"/>
                   <ParamRow label="Pondération intermédiaire" value={params.soirPoids} onChange={v=>setP("soirPoids",v)} unit="×" step="0.25"/>
-                  <div style={{marginTop:8,fontSize:10,color:"#c2410c",lineHeight:1.7,padding:"8px",background:"#ffedd5",borderRadius:4}}>
-                    Fin entre {params.soirDebut}h et {params.soirLimite}h → <b>{params.soirPoids}×</b><br/>
-                    Fin après {params.soirLimite}h → <b>1×</b><br/>
-                    Fin avant {params.soirDebut}h → <b>0×</b>
-                  </div>
+                  <div style={{marginTop:8,fontSize:10,color:"#c2410c",lineHeight:1.7,padding:"8px",background:"#ffedd5",borderRadius:4}}>Fin entre {params.soirDebut}h et {params.soirLimite}h → <b>{params.soirPoids}×</b><br/>Fin après {params.soirLimite}h → <b>1×</b><br/>Fin avant {params.soirDebut}h → <b>0×</b></div>
                 </div>
               </div>
               <ToggleRow label="Tolérance — vert pâle si proche de la cible" sub="Affiche les effectifs en vert pâle quand ils sont dans la marge définie ci-dessous." param={params.tolEffOn} setParam={v=>setP("tolEffOn",v)}/>
               {params.tolEffOn&&<ParamRow label="Marge de tolérance (±)" value={params.tolEff} onChange={v=>setP("tolEff",v)} unit="±" step="0.25"/>}
             </ParamSection>
-
             <ParamSection label="GÉNÉRATION AUTOMATIQUE" color="#bbf7d0">
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}}>
                 <div>
@@ -647,32 +651,21 @@ function App(){
               </div>
               <div style={{marginTop:16,borderTop:"1px solid #e2e8f0",paddingTop:16}}>
                 <ToggleRow label="Fermeture comptoir" sub="Raccourcit la fin du quart des équipiers au comptoir selon les règles ci-dessous." param={params.genFermetureComptoir} setParam={v=>setP("genFermetureComptoir",v)}/>
-                {params.genFermetureComptoir&&(
-                  <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"14px",marginTop:4}}>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-                      <div><div style={{fontSize:11,fontWeight:700,color:"#16a34a",marginBottom:8}}>SEUIL HAUT</div><ParamRow label={`Fermeture ≥`} value={params.genSeuilHaut} onChange={v=>setP("genSeuilHaut",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirHaut} onChange={v=>setP("genComptoirHaut",v)} unit="h" step="0.5"/></div>
-                      <div><div style={{fontSize:11,fontWeight:700,color:"#16a34a",marginBottom:8}}>SEUIL BAS</div><ParamRow label={`Entre X et ${params.genSeuilHaut}h`} value={params.genSeuilBas} onChange={v=>setP("genSeuilBas",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirBas} onChange={v=>setP("genComptoirBas",v)} unit="h" step="0.5"/></div>
-                    </div>
-                    <div style={{marginTop:8,fontSize:10,color:"#15803d",background:"#dcfce7",padding:"6px 10px",borderRadius:4}}>≥ {params.genSeuilHaut}h → comptoir à {params.genComptoirHaut}h &nbsp;·&nbsp; entre {params.genSeuilBas}h et {params.genSeuilHaut}h → comptoir à {params.genComptoirBas}h</div>
-                  </div>
-                )}
+                {params.genFermetureComptoir&&(<div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"14px",marginTop:4}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div><div style={{fontSize:11,fontWeight:700,color:"#16a34a",marginBottom:8}}>SEUIL HAUT</div><ParamRow label="Fermeture ≥" value={params.genSeuilHaut} onChange={v=>setP("genSeuilHaut",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirHaut} onChange={v=>setP("genComptoirHaut",v)} unit="h" step="0.5"/></div><div><div style={{fontSize:11,fontWeight:700,color:"#16a34a",marginBottom:8}}>SEUIL BAS</div><ParamRow label={`Entre X et ${params.genSeuilHaut}h`} value={params.genSeuilBas} onChange={v=>setP("genSeuilBas",v)} unit="h" step="0.5"/><ParamRow label="Fin comptoir" value={params.genComptoirBas} onChange={v=>setP("genComptoirBas",v)} unit="h" step="0.5"/></div></div><div style={{marginTop:8,fontSize:10,color:"#15803d",background:"#dcfce7",padding:"6px 10px",borderRadius:4}}>≥ {params.genSeuilHaut}h → comptoir à {params.genComptoirHaut}h &nbsp;·&nbsp; entre {params.genSeuilBas}h et {params.genSeuilHaut}h → comptoir à {params.genComptoirBas}h</div></div>)}
               </div>
             </ParamSection>
-
             <ParamSection label="IMPORT & DISPONIBILITÉS" color="#fef9c3">
-              <ToggleRow label="Corriger les fins de dispo en format 12h" sub={`Une fin saisie à ex. 11:00 sera convertie en 23:00 (ajout de 12h si inférieure au seuil). Corrige les erreurs de format AM.`} param={params.dispoFinCorrection} setParam={v=>setP("dispoFinCorrection",v)}/>
+              <ToggleRow label="Corriger les fins de dispo en format 12h" sub="Une fin saisie à ex. 11:00 sera convertie en 23:00 (ajout de 12h si inférieure au seuil)." param={params.dispoFinCorrection} setParam={v=>setP("dispoFinCorrection",v)}/>
               {params.dispoFinCorrection&&<ParamRow label="Seuil de correction (fin < Xh → +12h)" value={params.dispoFinSeuil} onChange={v=>setP("dispoFinSeuil",v)} unit="h" step="1"/>}
               <div style={{marginTop:12}}/>
               <ToggleRow label="Ignorer les disponibilités en priorité 0" sub="Lors de l'import PDF, les lignes associées au numéro de priorité 0 seront ignorées." param={params.dispoSkipPrioZero} setParam={v=>setP("dispoSkipPrioZero",v)}/>
             </ParamSection>
-
             <ParamSection label="FORMAT D'AFFICHAGE" color="#e2e8f0">
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div><div style={{fontSize:12,color:"#475569",fontWeight:500}}>Séparateur décimal</div><div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>Affichage des totaux (ex. 7,5 ou 7.5)</div></div>
                 <div style={{display:"flex",gap:8}}><ToggleBtn val="," cur={sep} onClick={v=>setP("sepDecimal",v)} label="Virgule  1,5"/><ToggleBtn val="." cur={sep} onClick={v=>setP("sepDecimal",v)} label="Point  1.5"/></div>
               </div>
             </ParamSection>
-
             <div style={{marginTop:24,display:"flex",justifyContent:"flex-end",gap:8}}>
               <button onClick={()=>setParams(DEF_P)} style={{background:"none",border:"1.5px solid #e2e8f0",padding:"8px 18px",cursor:"pointer",fontSize:13,color:"#64748b",borderRadius:4}}>Réinitialiser</button>
               <button onClick={()=>setPage("horaire")} style={{background:"#1e293b",border:"none",padding:"8px 18px",cursor:"pointer",fontSize:13,color:"#fff",fontWeight:600,borderRadius:4}}>← Retour</button>
