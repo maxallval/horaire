@@ -46,7 +46,7 @@ const DEF_P={
   dispoFinCorrection:true,dispoFinSeuil:13,dispoSkipPrioZero:true,
 };
 const BOOL_PARAMS=new Set(["sepDecimal","tolEffOn","genEcraser","genFermetureComptoir","genOuvertureFlexible","dispoFinCorrection","dispoSkipPrioZero"]);
-const SK={cin:"horaire:cin",eff:"horaire:eff",parts:"horaire:parts"};
+const SK={cin:"horaire:cin",eff:"horaire:eff",parts:"horaire:parts",emps:"horaire:emps"};
 
 // ─── Lazy PDF.js ──────────────────────────────────────────────────────────────
 let _pdfReady=null;
@@ -259,27 +259,30 @@ function App(){
   const hist=useRef([]),fut=useRef([]),before=useRef(null);
   const cinHist=useRef([]),cinFut=useRef([]),cinBefore=useRef(null);
 
-  // Retire l'écran de chargement au premier render
   useEffect(()=>{const ld=document.getElementById("loading");if(ld)ld.remove();},[]);
 
   useEffect(()=>{(async()=>{
-    const[sc,se,sp]=await Promise.all([stoLoad(SK.cin),stoLoad(SK.eff),stoLoad(SK.parts)]);
-    if(sc&&sc.length===7)setCin(sc);if(se&&se.length===7)setEff(se);
-    if(sp)setEmps(l=>l.map(e=>{const p=sp[e.id];return p?{...e,particularite:p.particularite||"",maxH:p.maxH||"",noteP:p.noteP||"",prio:p.prio!==undefined?p.prio:e.prio}:e;}));
+    const[sc,se,sp,sem]=await Promise.all([stoLoad(SK.cin),stoLoad(SK.eff),stoLoad(SK.parts),stoLoad(SK.emps)]);
+    if(sc&&sc.length===7)setCin(sc);
+    if(se&&se.length===7)setEff(se);
+    if(sem&&sem.length>0){
+      uid=Math.max(...sem.map(e=>e.id))+1;
+      setEmps(sem);
+    } else if(sp){
+      setEmps(l=>l.map(e=>{const p=sp[e.id];return p?{...e,particularite:p.particularite||"",maxH:p.maxH||"",noteP:p.noteP||"",prio:p.prio!==undefined?p.prio:e.prio}:e;}));
+    }
     setSavedOk(await stoSave("horaire:test","ok"));setLoaded(true);
   })();},[]);
   useEffect(()=>{if(loaded)stoSave(SK.cin,cin);},[cin,loaded]);
   useEffect(()=>{if(loaded)stoSave(SK.eff,eff);},[eff,loaded]);
-  useEffect(()=>{if(!loaded)return;const p={};emps.forEach(e=>{p[e.id]={particularite:e.particularite,maxH:e.maxH,noteP:e.noteP,prio:e.prio};});stoSave(SK.parts,p);},[emps,loaded]);
+  useEffect(()=>{if(loaded)stoSave(SK.emps,emps);},[emps,loaded]);
 
   // ── Derived ──
   const sep=params.sepDecimal;
   const fmtH=useCallback(h=>fmtDec(h,sep),[sep]);
 
-  // getRawDispo : valeur brute pour l'affichage dans l'éditeur de dispos
   const getRawDispo=useCallback(emp=>emp.dispo&&emp.dispo.length===7?emp.dispo:mkDispo(),[]);
 
-  // getDispo : valeur corrigée (+12h si AM) pour la génération et les placeholders
   const getDispo=useCallback(emp=>{
     const d=getRawDispo(emp);
     if(!params.dispoFinCorrection)return d;
@@ -494,8 +497,6 @@ function App(){
 
   const renderCells=(row,di,day,isHoraire)=>{
     if(isBlocked(row.particularite))return <div style={{height:52,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:2,borderRadius:2,background:"#c8cdd8"}}/></div>;
-    // Horaire: afficher la dispo corrigée en placeholder
-    // Dispos: afficher la valeur brute (sans correction)
     const dispRow=isHoraire?getDispo(row):getRawDispo(row);
     const dDay=dispRow[di];
     if(isHoraire){
